@@ -20,7 +20,7 @@ export default function DashboardPage() {
       <div className="bg-white border border-zinc-200 rounded-lg p-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2 text-zinc-700">
           <Calendar className="h-4 w-4 text-zinc-500 shrink-0" />
-          <span className="text-sm font-semibold tracking-tight">집계 조회 기간</span>
+          <span className="text-sm font-semibold tracking-tight">조회 기간</span>
         </div>
 
         <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-1">
