@@ -49,7 +49,7 @@ export default function LoginForm() {
             플랫폼 로그인
           </h1>
           <p className="text-xs text-zinc-500">
-            SF UMON AI Core Platform 서비스 이용을 위해 인증을 진행해주세요.
+            SF UMON, feat. Vibe Code & AI 서비스 이용을 위해 인증을 진행해주세요.
           </p>
         </div>
 
@@ -137,7 +137,7 @@ export default function LoginForm() {
         </form>
 
         <div className="pt-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100">
-          SF UMON AI Core Operations &copy; 2026
+          SF UMON, feat. Vibe Code & AI &copy; 2026
         </div>
       </div>
     </div>

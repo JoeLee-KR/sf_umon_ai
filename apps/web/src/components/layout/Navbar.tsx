@@ -13,7 +13,7 @@ export default function Navbar() {
       {/* 로고 영역 (링크 없이 기존 형태 유지) */}
       <div className="flex items-center gap-2.5 font-bold text-zinc-900 tracking-tight text-sm select-none">
         <Activity className="h-5 w-5 text-indigo-600 shrink-0" />
-        <span>SF UMON AI Core Platform</span>
+        <span>(Study Project) SF UMON, feat. Vibe Code & AI</span>
       </div>
 
       {/* 우측 영역 */}

@@ -1,3 +1,7 @@
+# 기본페이지지정
+- apps/web/src/app/page.tsx
+- redirect('/employees'), redirect('/dashboard')
+
 # OPEN, LOCAL, KEYCLOAK, SSO 의 지정에 따라서, 별도의 로그인 확인 하는 코드
 - apps/web/src/app/api/auth/login/route.ts
 - 서버 환경 변수(process.env.AUTH_MODE)로 설정된 값을 읽어, switch (authMode) 구문을 사용

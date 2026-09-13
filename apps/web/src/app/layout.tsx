@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SF UMON AI Core Platform",
+  title: "SF UMON, feat. Vibe Code & AI",
   description: "Enterprise Operations & Metric Dashboard",
 };
 
