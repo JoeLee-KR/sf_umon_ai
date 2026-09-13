@@ -32,3 +32,24 @@
 ### Verification
 - `npm run build`를 실행하여 Next.js 프로젝트의 TypeScript 컴파일 및 정적 페이지 생성이 에러 없이 정상 완료됨을 검증했습니다.
 - 린트(`lint`) 검사를 통해 수정된 파일들에 문법 및 구문 에러가 없음을 확인했습니다.
+
+
+
+#
+#
+#
+
+# Next.js Base Path
+NEXT_PUBLIC_BASE_PATH=/sfumonai
+
+# SSH 터널링 로컬 포트 및 DB 정보 (로컬 개발 환경)
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=sfumonai
+MYSQL_PASSWORD=12091209
+MYSQL_DATABASE=sf_umon_db
+
+# 암호 모드: OPEN, LOCAL, KEYCLOAK, SSO
+AUTH_MODE=OPEN
+
+# EOF
