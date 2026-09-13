@@ -11,7 +11,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: '대시보드', href: '/', icon: LayoutDashboard },
+    { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
     { label: '임직원 통계/원천', href: '/employees', icon: Users },
     { label: '설정 관리', href: '/settings', icon: Sliders },
   ];
