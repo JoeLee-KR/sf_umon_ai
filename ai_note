@@ -11,3 +11,24 @@
 
 ### Verification
 - `next build`를 실행하여 모든 라우트(`/`, `/employees`, `/user/detail`, `/user/password`, `/api/auth/login`, `/api/auth/mode` 등)의 컴파일 및 타입 검증을 완료했습니다.
+
+
+
+#
+#
+#
+
+
+### Summary
+- 로그인 실패 메시지 및 폼 내 oasis 안내 문구를 정리하고, 현재 인증 모드와 실패 여부만 표시하도록 변경했습니다.
+- 로그인 성공 시 기본 페이지를 임직원 통계 페이지(`/employees`)로 설정하고, GNB에 Logout 버튼을 추가하여 로그아웃 기능을 구현했습니다.
+
+### Changes
+- `apps/web/src/app/api/auth/login/route.ts`: 로그인 실패 시 oasis 관련 멘트를 제거하고 현재 모드 및 실패 여부(`[OPEN 모드] 로그인에 실패했습니다.`)만 반환하도록 수정
+- `apps/web/src/components/auth/LoginForm.tsx`: oasis 입력 힌트 및 하단 안내 문구를 삭제하고 일반화된 플레이스홀더 적용 및 로그인 성공 시 `/employees`로 라우팅 처리
+- `apps/web/src/app/page.tsx`: 기본 진입 페이지(`/`) 접속 시 임직원 통계 페이지(`/employees`)로 자동 리다이렉트되도록 구성
+- `apps/web/src/components/layout/Navbar.tsx`: 로그인 상태 시 GNB 사용자 ID 우측에 Logout 버튼을 추가하고 로그아웃 처리 연동
+
+### Verification
+- `npm run build`를 실행하여 Next.js 프로젝트의 TypeScript 컴파일 및 정적 페이지 생성이 에러 없이 정상 완료됨을 검증했습니다.
+- 린트(`lint`) 검사를 통해 수정된 파일들에 문법 및 구문 에러가 없음을 확인했습니다.
