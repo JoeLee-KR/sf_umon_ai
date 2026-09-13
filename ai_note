@@ -1,0 +1,13 @@
+### Summary
+- SPA 전역 로그인 인증 시스템 및 화면 보호(Auth Guard) 구현 완료
+- `.env.local`의 `AUTH_MODE`(OPEN, LOCAL, KEYCLOAK, SSO) 처리 구조 및 `OPEN` 모드 `oasis` 아이디 검증 구현
+- GNB 사용자 ID 표시, 사용자 상세 정보 페이지, 암호 변경 안내 페이지 구현
+
+### Changes
+- **인증 Context 및 API (`/api/auth/mode`, `/api/auth/login`, `AuthContext`)**: `.env.local`의 `AUTH_MODE`를 읽어 인증 방식을 제어하며, `OPEN` 모드에서 `oasis` 아이디 검증 및 `LOCAL`/`KEYCLOAK`/`SSO` 모드 확장을 위한 공통 입력 처리 및 주석 가이드를 작성했습니다.
+- **SPA 인증 가드 및 로그인 화면 (`AppShell`, `LoginForm`)**: 미인증 상태에서는 어떤 URL로 직접 접근하더라도 화면 전체에 로그인 폼이 노출되도록 제어했습니다.
+- **GNB 네비게이션 (`Navbar`)**: 미인증 시에는 링크 없는 기본 형태를 유지하고, 로그인 성공 시 가장 오른쪽에 사용자 ID를 표시하며 클릭 시 사용자 상세 정보 페이지로 이동하도록 구현했습니다.
+- **사용자 상세 정보 및 암호 변경 페이지 (`/user/detail`, `/user/password`)**: 현재 사용자 ID 및 인증 모드 표시, '정보 변경 완료' 버튼, '암호 변경' 버튼(클릭 시 암호 변경 페이지 이동) 및 LOCAL/KEYCLOAK 모드 대비 '추후 개발 예정' 안내 페이지를 구현했습니다.
+
+### Verification
+- `next build`를 실행하여 모든 라우트(`/`, `/employees`, `/user/detail`, `/user/password`, `/api/auth/login`, `/api/auth/mode` 등)의 컴파일 및 타입 검증을 완료했습니다.
