@@ -1,36 +1,4 @@
-### Summary
-- SPA 전역 로그인 인증 시스템 및 화면 보호(Auth Guard) 구현 완료
-- `.env.local`의 `AUTH_MODE`(OPEN, LOCAL, KEYCLOAK, SSO) 처리 구조 및 `OPEN` 모드 `oasis` 아이디 검증 구현
-- GNB 사용자 ID 표시, 사용자 상세 정보 페이지, 암호 변경 안내 페이지 구현
-
-### Changes
-- **인증 Context 및 API (`/api/auth/mode`, `/api/auth/login`, `AuthContext`)**: `.env.local`의 `AUTH_MODE`를 읽어 인증 방식을 제어하며, `OPEN` 모드에서 `oasis` 아이디 검증 및 `LOCAL`/`KEYCLOAK`/`SSO` 모드 확장을 위한 공통 입력 처리 및 주석 가이드를 작성했습니다.
-- **SPA 인증 가드 및 로그인 화면 (`AppShell`, `LoginForm`)**: 미인증 상태에서는 어떤 URL로 직접 접근하더라도 화면 전체에 로그인 폼이 노출되도록 제어했습니다.
-- **GNB 네비게이션 (`Navbar`)**: 미인증 시에는 링크 없는 기본 형태를 유지하고, 로그인 성공 시 가장 오른쪽에 사용자 ID를 표시하며 클릭 시 사용자 상세 정보 페이지로 이동하도록 구현했습니다.
-- **사용자 상세 정보 및 암호 변경 페이지 (`/user/detail`, `/user/password`)**: 현재 사용자 ID 및 인증 모드 표시, '정보 변경 완료' 버튼, '암호 변경' 버튼(클릭 시 암호 변경 페이지 이동) 및 LOCAL/KEYCLOAK 모드 대비 '추후 개발 예정' 안내 페이지를 구현했습니다.
-
-### Verification
-- `next build`를 실행하여 모든 라우트(`/`, `/employees`, `/user/detail`, `/user/password`, `/api/auth/login`, `/api/auth/mode` 등)의 컴파일 및 타입 검증을 완료했습니다.
-
-
-
-#
-#
-#
-
-
-### Summary
-- 로그인 실패 메시지 및 폼 내 oasis 안내 문구를 정리하고, 현재 인증 모드와 실패 여부만 표시하도록 변경했습니다.
-- 로그인 성공 시 기본 페이지를 임직원 통계 페이지(`/employees`)로 설정하고, GNB에 Logout 버튼을 추가하여 로그아웃 기능을 구현했습니다.
-
-### Changes
-- `apps/web/src/app/api/auth/login/route.ts`: 로그인 실패 시 oasis 관련 멘트를 제거하고 현재 모드 및 실패 여부(`[OPEN 모드] 로그인에 실패했습니다.`)만 반환하도록 수정
-- `apps/web/src/components/auth/LoginForm.tsx`: oasis 입력 힌트 및 하단 안내 문구를 삭제하고 일반화된 플레이스홀더 적용 및 로그인 성공 시 `/employees`로 라우팅 처리
-- `apps/web/src/app/page.tsx`: 기본 진입 페이지(`/`) 접속 시 임직원 통계 페이지(`/employees`)로 자동 리다이렉트되도록 구성
-- `apps/web/src/components/layout/Navbar.tsx`: 로그인 상태 시 GNB 사용자 ID 우측에 Logout 버튼을 추가하고 로그아웃 처리 연동
-
-### Verification
-- `npm run build`를 실행하여 Next.js 프로젝트의 TypeScript 컴파일 및 정적 페이지 생성이 에러 없이 정상 완료됨을 검증했습니다.
-- 린트(`lint`) 검사를 통해 수정된 파일들에 문법 및 구문 에러가 없음을 확인했습니다.
-
-# EOF
+# OPEN, LOCAL, KEYCLOAK, SSO 의 지정에 따라서, 별도의 로그인 확인 하는 코드
+- apps/web/src/app/api/auth/login/route.ts
+- 서버 환경 변수(process.env.AUTH_MODE)로 설정된 값을 읽어, switch (authMode) 구문을 사용
+- 각각 다르게 로그인 검증을 수행
