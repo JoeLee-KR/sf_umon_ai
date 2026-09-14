@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Sliders, ChevronLeft, ChevronRight, HardDrive } from 'lucide-react';
+import { LayoutDashboard, Users, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
@@ -12,7 +12,6 @@ export default function Sidebar() {
 
   const navItems = [
     { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
-    { label: '스토리지 사용량 조회', href: '/storage', icon: HardDrive },
     { label: '임직원 통계/원천', href: '/employees', icon: Users },
     { label: '설정 관리', href: '/settings', icon: Sliders },
   ];
