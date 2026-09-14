@@ -1,0 +1,9 @@
+name,type,kind,null?,default,primary key,unique key,check,expression,comment,policy name,privacy domain,write default
+USAGE_DATE,DATE,COLUMN,Y,,N,N,,,,,,
+STORAGE_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+STAGE_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+FAILSAFE_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+HYBRID_TABLE_STORAGE_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+ARCHIVE_STORAGE_COOL_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+ARCHIVE_STORAGE_COLD_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,
+ARCHIVE_STORAGE_RETRIEVAL_TEMP_BYTES,"NUMBER(38,0)",COLUMN,Y,,N,N,,,,,,

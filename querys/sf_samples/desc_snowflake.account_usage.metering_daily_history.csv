@@ -1,0 +1,8 @@
+name,type,kind,null?,default,primary key,unique key,check,expression,comment,policy name,privacy domain,write default
+SERVICE_TYPE,VARCHAR(16777216),COLUMN,Y,,N,N,,,,,,
+USAGE_DATE,DATE,COLUMN,Y,,N,N,,,,,,
+CREDITS_USED_COMPUTE,"NUMBER(38,9)",COLUMN,Y,,N,N,,,,,,
+CREDITS_USED_CLOUD_SERVICES,"NUMBER(38,9)",COLUMN,Y,,N,N,,,,,,
+CREDITS_USED,"NUMBER(38,9)",COLUMN,Y,,N,N,,,,,,
+CREDITS_ADJUSTMENT_CLOUD_SERVICES,"NUMBER(38,10)",COLUMN,Y,,N,N,,,,,,
+CREDITS_BILLED,"NUMBER(38,10)",COLUMN,Y,,N,N,,,,,,
