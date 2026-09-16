@@ -8,3 +8,4 @@ snowflake usage mon, feat AI
 - 회사 Gemini Vertex 연결하면?
 - 회사 Gemini Vertex를 Side Helper로 연결하려면?
 +==
+latest
