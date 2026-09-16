@@ -15,7 +15,7 @@ export default function Sidebar() {
     { label: '스토리지 사용량 조회', href: '/storage', icon: HardDrive },
     { label: '컴퓨트 사용량 조회', href: '/compute', icon: Cpu },
     { label: '월 비용 확인', href: '/cost', icon: CircleDollarSign },
-    { label: '설정 관리', href: '/settings', icon: Sliders },
+    { label: '(개발후보)설정 관리', href: '/settings', icon: Sliders },
     { label: '(테스트)직원연봉', href: '/employees', icon: Users },
   ];
 

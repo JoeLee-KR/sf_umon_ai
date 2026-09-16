@@ -23,12 +23,12 @@ export interface MonthlyCostCalculation {
   
   // Storage
   storageAvgTb: number;
-  storageUnitPrice: number; // default $5.225 / TB
+  storageUnitPrice: number; // default $25 / TB
   storageCost: number;
   
   // COM_SF
   comSfCredits: number;
-  comSfUnitPrice: number; // default $2.0 / credit
+  comSfUnitPrice: number; // default $5.225 / credit
   comSfCost: number;
   
   // COM_AI

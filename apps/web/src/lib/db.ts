@@ -673,10 +673,10 @@ export async function ensureMonthlyBillingTable(connection: mysql.Connection): P
       start_date VARCHAR(10) NOT NULL,
       end_date VARCHAR(10) NOT NULL,
       storage_tb_avg DOUBLE NOT NULL DEFAULT 0,
-      storage_unit_price DOUBLE NOT NULL DEFAULT 5.225,
+      storage_unit_price DOUBLE NOT NULL DEFAULT 25.0,
       storage_cost DOUBLE NOT NULL DEFAULT 0,
       com_sf_credits DOUBLE NOT NULL DEFAULT 0,
-      com_sf_unit_price DOUBLE NOT NULL DEFAULT 2.0,
+      com_sf_unit_price DOUBLE NOT NULL DEFAULT 5.225,
       com_sf_cost DOUBLE NOT NULL DEFAULT 0,
       com_ai_credits DOUBLE NOT NULL DEFAULT 0,
       com_ai_unit_price DOUBLE NOT NULL DEFAULT 2.0,
@@ -724,6 +724,7 @@ export async function fetchMonthlyCostCalculation(
     const { startDate, endDate } = getMonthDateRange(targetMonth);
 
     // 1. Fetch storage usage for the month (1st to last day)
+    // Storage, Stage, Failsafe bytes를 모두 합산한 일별 사용량의 평균
     const storageQuery = `
       SELECT storage_bytes, stage_bytes, failsafe_bytes
       FROM sf_storage_usage
@@ -736,12 +737,15 @@ export async function fetchMonthlyCostCalculation(
     const storageCount = Array.isArray(storageRows) ? storageRows.length : 0;
     if (storageCount > 0) {
       for (const row of storageRows) {
-        storageSumBytes += Number(row.storage_bytes) || 0;
+        const rowStorageBytes = Number(row.storage_bytes) || 0;
+        const rowStageBytes = Number(row.stage_bytes) || 0;
+        const rowFailsafeBytes = Number(row.failsafe_bytes) || 0;
+        storageSumBytes += (rowStorageBytes + rowStageBytes + rowFailsafeBytes);
       }
     }
     const storageAvgBytes = storageCount > 0 ? storageSumBytes / storageCount : 0;
     const bytesInTb = 1024 * 1024 * 1024 * 1024; // 1 TiB
-    const storageAvgTb = Number((storageAvgBytes / bytesInTb).toFixed(6));
+    const storageAvgTb = Number((storageAvgBytes / bytesInTb).toFixed(4));
 
     // 2. Fetch compute usage for the month (1st to last day)
     const computeQuery = `
@@ -773,10 +777,10 @@ export async function fetchMonthlyCostCalculation(
       }
     }
 
-    comSfCredits = Number(comSfCredits.toFixed(6));
-    comAiCredits = Number(comAiCredits.toFixed(6));
-    aiTokenCredits = Number(aiTokenCredits.toFixed(6));
-    const totalCredits = Number((comSfCredits + comAiCredits + aiTokenCredits).toFixed(6));
+    comSfCredits = Number(comSfCredits.toFixed(4));
+    comAiCredits = Number(comAiCredits.toFixed(4));
+    aiTokenCredits = Number(aiTokenCredits.toFixed(4));
+    const totalCredits = Number((comSfCredits + comAiCredits + aiTokenCredits).toFixed(4));
 
     const usage: MonthlyUsageRawData = {
       month: targetMonth,
@@ -854,8 +858,8 @@ export async function fetchMonthlyCostCalculation(
     return {
       usage,
       defaults: {
-        storageUnitPrice: 5.225,
-        comSfUnitPrice: 2.0,
+        storageUnitPrice: 25.0,
+        comSfUnitPrice: 5.225,
         comAiUnitPrice: 2.0,
         aiTokenCost: confirmedRecord ? confirmedRecord.ai_token_cost : 0,
       },

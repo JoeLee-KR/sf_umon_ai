@@ -5,7 +5,7 @@ import {
   MonthlyCostCalculateResponse,
   MonthlyBillingRecord,
 } from '@/types/cost';
-import { formatCurrency, formatCredits } from '@/lib/formatters';
+import { formatCurrency, formatCredits, formatNumberExact } from '@/lib/formatters';
 import {
   Calculator,
   Calendar,
@@ -49,8 +49,8 @@ export default function MonthlyCostCalculator({
   const [data, setData] = useState<MonthlyCostCalculateResponse | null>(null);
 
   // Editable prices and inputs
-  const [storageUnitPrice, setStorageUnitPrice] = useState<number>(5.225);
-  const [comSfUnitPrice, setComSfUnitPrice] = useState<number>(2.0);
+  const [storageUnitPrice, setStorageUnitPrice] = useState<number>(25.0);
+  const [comSfUnitPrice, setComSfUnitPrice] = useState<number>(5.225);
   const [comAiUnitPrice, setComAiUnitPrice] = useState<number>(2.0);
   const [aiTokenCostInput, setAiTokenCostInput] = useState<number>(0);
   const [note, setNote] = useState<string>('');
@@ -143,18 +143,18 @@ export default function MonthlyCostCalculator({
     }
 
     const storageTb = data.usage.storageAvgTb || 0;
-    const storageCost = Number((storageTb * (Number(storageUnitPrice) || 0)).toFixed(2));
+    const storageCost = Number((storageTb * (Number(storageUnitPrice) || 0)).toFixed(4));
 
     const comSfCredits = data.usage.comSfCredits || 0;
-    const comSfCost = Number((comSfCredits * (Number(comSfUnitPrice) || 0)).toFixed(2));
+    const comSfCost = Number((comSfCredits * (Number(comSfUnitPrice) || 0)).toFixed(4));
 
     const comAiCredits = data.usage.comAiCredits || 0;
-    const comAiCost = Number((comAiCredits * (Number(comAiUnitPrice) || 0)).toFixed(2));
+    const comAiCost = Number((comAiCredits * (Number(comAiUnitPrice) || 0)).toFixed(4));
 
     const aiTokenCredits = data.usage.aiTokenCredits || 0;
-    const aiTokenCost = Number((Number(aiTokenCostInput) || 0).toFixed(2));
+    const aiTokenCost = Number((Number(aiTokenCostInput) || 0).toFixed(4));
 
-    const totalCost = Number((storageCost + comSfCost + comAiCost + aiTokenCost).toFixed(2));
+    const totalCost = Number((storageCost + comSfCost + comAiCost + aiTokenCost).toFixed(4));
 
     return {
       storageTb,
@@ -304,7 +304,7 @@ export default function MonthlyCostCalculator({
         {data?.confirmedRecord ? (
           <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>이미 확정된 월입니다 ({data.confirmedRecord.confirmed_at} 확정됨, ${data.confirmedRecord.total_cost.toLocaleString()})</span>
+            <span>이미 확정된 월입니다 ({data.confirmedRecord.confirmed_at} 확정됨, {formatCurrency(data.confirmedRecord.total_cost, 4)})</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 font-medium">
@@ -337,7 +337,7 @@ export default function MonthlyCostCalculator({
         <div className="mx-6 mt-6 p-3.5 rounded-lg bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
           <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-blue-950">재확정 안내:</span> 이 월({selectedMonth})에는 이미 확정된 내역(총 {formatCurrency(data.confirmedRecord.total_cost)})이 존재합니다.
+            <span className="font-semibold text-blue-950">재확정 안내:</span> 이 월({selectedMonth})에는 이미 확정된 내역(총 {formatCurrency(data.confirmedRecord.total_cost, 4)})이 존재합니다.
             단가나 항목을 수정하고 다시 <strong className="font-semibold text-blue-950">[요금 확정 (Confirm)]</strong>을 진행하면,
             기존 확정 내역은 자동으로 <strong>비활성(INACTIVE)</strong> 처리되고 새로운 내역이 <strong>유효(ACTIVE)</strong>로 갱신됩니다.
           </div>
@@ -370,13 +370,13 @@ export default function MonthlyCostCalculator({
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-zinc-900">Storage 저장량 평균</h4>
-                    <p className="text-xs text-zinc-500">1일부터 말일까지 일평균 저장 용량</p>
+                    <p className="text-xs text-zinc-500">1일부터 말일까지 일평균 저장 용량 (Storage + Stage + Failsafe 합산)</p>
                   </div>
                 </div>
 
                 <div className="col-span-12 md:col-span-3 text-left md:text-right">
                   <div className="text-sm font-semibold text-zinc-900 font-mono">
-                    {calculations.storageTb.toFixed(4)} <span className="text-xs font-normal text-zinc-500">TB</span>
+                    {formatNumberExact(calculations.storageTb, 4)} <span className="text-xs font-normal text-zinc-500">TB</span>
                   </div>
                   <div className="text-xs text-zinc-400">
                     ({(data?.usage.storageAvgBytes || 0).toLocaleString()} Bytes)
@@ -387,17 +387,17 @@ export default function MonthlyCostCalculator({
                   <span className="text-xs text-zinc-500">TB당 $</span>
                   <input
                     type="number"
-                    step="0.001"
+                    step="0.0001"
                     min="0"
                     value={storageUnitPrice}
                     onChange={(e) => setStorageUnitPrice(parseFloat(e.target.value) || 0)}
-                    className="w-24 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    className="w-28 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                   />
                 </div>
 
                 <div className="col-span-12 md:col-span-2 text-left md:text-right">
                   <span className="text-sm font-bold font-mono text-zinc-900">
-                    {formatCurrency(calculations.storageCost)}
+                    {formatCurrency(calculations.storageCost, 4)}
                   </span>
                 </div>
               </div>
@@ -416,7 +416,7 @@ export default function MonthlyCostCalculator({
 
                 <div className="col-span-12 md:col-span-3 text-left md:text-right">
                   <div className="text-sm font-semibold text-zinc-900 font-mono">
-                    {formatCredits(calculations.comSfCredits, 4)} <span className="text-xs font-normal text-zinc-500">Credit</span>
+                    {formatCredits(calculations.comSfCredits, 4, true)} <span className="text-xs font-normal text-zinc-500">Credit</span>
                   </div>
                 </div>
 
@@ -424,17 +424,17 @@ export default function MonthlyCostCalculator({
                   <span className="text-xs text-zinc-500">Credit당 $</span>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.0001"
                     min="0"
                     value={comSfUnitPrice}
                     onChange={(e) => setComSfUnitPrice(parseFloat(e.target.value) || 0)}
-                    className="w-24 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    className="w-28 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                   />
                 </div>
 
                 <div className="col-span-12 md:col-span-2 text-left md:text-right">
                   <span className="text-sm font-bold font-mono text-zinc-900">
-                    {formatCurrency(calculations.comSfCost)}
+                    {formatCurrency(calculations.comSfCost, 4)}
                   </span>
                 </div>
               </div>
@@ -453,7 +453,7 @@ export default function MonthlyCostCalculator({
 
                 <div className="col-span-12 md:col-span-3 text-left md:text-right">
                   <div className="text-sm font-semibold text-zinc-900 font-mono">
-                    {formatCredits(calculations.comAiCredits, 4)} <span className="text-xs font-normal text-zinc-500">Credit</span>
+                    {formatCredits(calculations.comAiCredits, 4, true)} <span className="text-xs font-normal text-zinc-500">Credit</span>
                   </div>
                 </div>
 
@@ -461,17 +461,17 @@ export default function MonthlyCostCalculator({
                   <span className="text-xs text-zinc-500">Credit당 $</span>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.0001"
                     min="0"
                     value={comAiUnitPrice}
                     onChange={(e) => setComAiUnitPrice(parseFloat(e.target.value) || 0)}
-                    className="w-24 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    className="w-28 px-2.5 py-1 text-sm font-mono text-right bg-white border border-zinc-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                   />
                 </div>
 
                 <div className="col-span-12 md:col-span-2 text-left md:text-right">
                   <span className="text-sm font-bold font-mono text-zinc-900">
-                    {formatCurrency(calculations.comAiCost)}
+                    {formatCurrency(calculations.comAiCost, 4)}
                   </span>
                 </div>
               </div>
@@ -495,7 +495,7 @@ export default function MonthlyCostCalculator({
 
                 <div className="col-span-12 md:col-span-3 text-left md:text-right">
                   <div className="text-sm font-semibold text-zinc-900 font-mono">
-                    {formatCredits(calculations.aiTokenCredits, 4)} <span className="text-xs font-normal text-zinc-500">Credit</span>
+                    {formatCredits(calculations.aiTokenCredits, 4, true)} <span className="text-xs font-normal text-zinc-500">Credit</span>
                   </div>
                 </div>
 
@@ -503,18 +503,18 @@ export default function MonthlyCostCalculator({
                   <span className="text-xs font-medium text-amber-900">직접 입력 $</span>
                   <input
                     type="number"
-                    step="0.01"
+                    step="0.0001"
                     min="0"
                     value={aiTokenCostInput}
                     onChange={(e) => setAiTokenCostInput(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="w-28 px-2.5 py-1 text-sm font-mono font-semibold text-right bg-white border border-amber-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition shadow-xs"
+                    placeholder="0.0000"
+                    className="w-32 px-2.5 py-1 text-sm font-mono font-semibold text-right bg-white border border-amber-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition shadow-xs"
                   />
                 </div>
 
                 <div className="col-span-12 md:col-span-2 text-left md:text-right">
                   <span className="text-sm font-bold font-mono text-amber-700">
-                    {formatCurrency(calculations.aiTokenCost)}
+                    {formatCurrency(calculations.aiTokenCost, 4)}
                   </span>
                 </div>
               </div>
@@ -556,10 +556,7 @@ export default function MonthlyCostCalculator({
                 </div>
                 <div className="text-2xl font-extrabold text-white font-mono flex items-center justify-end gap-1">
                   <DollarSign className="h-6 w-6 text-emerald-400 -mr-1" />
-                  {calculations.totalCost.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatNumberExact(calculations.totalCost, 4)}
                 </div>
               </div>
 

@@ -57,71 +57,56 @@ export default function MonthlyCostPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-5">
       {/* Top Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
-              <CircleDollarSign className="h-6 w-6" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
+              <CircleDollarSign className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">
-                월 비용 확인
-              </h1>
-              <p className="text-sm text-zinc-500 mt-0.5">
-                월별 스토리지 및 컴퓨트 사용량 정산, 단가 조절 및 요금 확정(Confirm)과 히스토리를 관리합니다.
-              </p>
-            </div>
+            <h1 className="text-xl font-bold text-zinc-900">
+              월 비용 확인
+            </h1>
           </div>
+          <p className="text-xs text-zinc-500 mt-1">
+            월별 스토리지 및 컴퓨트 사용량 정산, 단가 조절 및 요금 확정(Confirm)과 히스토리를 관리합니다.
+          </p>
         </div>
 
         <button
           type="button"
           onClick={handleRefreshAll}
           disabled={loadingHistory}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-zinc-300 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 shadow-xs transition disabled:opacity-50 cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 shadow-2xs transition disabled:opacity-50 cursor-pointer self-start sm:self-auto"
         >
-          <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin text-indigo-600' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${loadingHistory ? 'animate-spin text-indigo-600' : ''}`} />
           <span>새로고침</span>
         </button>
       </div>
 
       {/* Block 1: Monthly Cost Calculation & Confirmation */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-            Block 1
-          </span>
-          <span className="text-xs text-zinc-500 font-medium">
-            전달 및 지정월 기준 요금 산정 / 확정
-          </span>
-        </div>
-
+      <section>
         <MonthlyCostCalculator onConfirmSuccess={handleConfirmSuccess} />
       </section>
 
       {/* Block 2: Confirmed Cost History (Chart & List) */}
-      <section className="space-y-6 pt-4 border-t border-zinc-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-900 text-white text-xs font-bold">
-                2
-              </span>
-              <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-indigo-600" />
-                확정 요금 히스토리 (그래프 & 리스트)
-              </h2>
-            </div>
-            <p className="text-xs text-zinc-500 mt-1 pl-9">
-              현재까지 확정(Active)된 월단위 요금의 통계 그래프 및 상세 내역입니다. (기본 12개월 조회)
-            </p>
-          </div>
+      <section className="bg-zinc-50/70 rounded-xl border border-zinc-200 p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-zinc-900 text-white text-xs font-bold shadow-2xs">
+            2
+          </span>
+          <h2 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-indigo-600" />
+            확정 요금 히스토리 (그래프 & 리스트)
+          </h2>
+          <span className="text-xs text-zinc-500 hidden sm:inline ml-1">
+            - 현재까지 확정(Active)된 월단위 요금 통계 그래프 및 상세 내역입니다. (기본 12개월 조회)
+          </span>
         </div>
 
         {historyError && (
-          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-medium">
+          <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-medium">
             히스토리 로드 오류: {historyError}
           </div>
         )}

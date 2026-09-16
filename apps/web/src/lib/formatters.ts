@@ -36,10 +36,7 @@ export function formatCredits(
   exactDecimals: boolean = false
 ): string {
   if (credits === 0 || isNaN(credits)) {
-    if (exactDecimals) {
-      return (0).toFixed(decimals);
-    }
-    return decimals === 6 ? '0.000000' : '0.0000';
+    return (0).toFixed(decimals);
   }
   return credits.toLocaleString(undefined, {
     minimumFractionDigits: exactDecimals ? decimals : Math.min(2, decimals),
@@ -75,4 +72,17 @@ export function formatCurrency(
     maximumFractionDigits: decimals,
   });
   return includeDollarSign ? `$${formatted}` : formatted;
+}
+
+export function formatNumberExact(
+  value: number,
+  decimals: number = 4
+): string {
+  if (isNaN(value)) {
+    return (0).toFixed(decimals);
+  }
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { MonthlyBillingRecord } from '@/types/cost';
-import { formatCurrency, formatCredits } from '@/lib/formatters';
+import { formatCurrency, formatCredits, formatNumberExact } from '@/lib/formatters';
 import {
   Table as TableIcon,
   Download,
@@ -93,18 +93,18 @@ export default function MonthlyCostHistoryTable({
       item.billing_month,
       item.start_date,
       item.end_date,
-      item.storage_tb_avg,
-      item.storage_unit_price,
-      item.storage_cost,
-      item.com_sf_credits,
-      item.com_sf_unit_price,
-      item.com_sf_cost,
-      item.com_ai_credits,
-      item.com_ai_unit_price,
-      item.com_ai_cost,
-      item.ai_token_credits,
-      item.ai_token_cost,
-      item.total_cost,
+      item.storage_tb_avg.toFixed(4),
+      item.storage_unit_price.toFixed(4),
+      item.storage_cost.toFixed(4),
+      item.com_sf_credits.toFixed(4),
+      item.com_sf_unit_price.toFixed(4),
+      item.com_sf_cost.toFixed(4),
+      item.com_ai_credits.toFixed(4),
+      item.com_ai_unit_price.toFixed(4),
+      item.com_ai_cost.toFixed(4),
+      item.ai_token_credits.toFixed(4),
+      item.ai_token_cost.toFixed(4),
+      item.total_cost.toFixed(4),
       item.status,
       item.note ? `"${item.note.replace(/"/g, '""')}"` : '',
       item.confirmed_at,
@@ -171,22 +171,22 @@ export default function MonthlyCostHistoryTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[1280px] text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="bg-zinc-100/80 border-b border-zinc-200 text-zinc-700 font-semibold uppercase tracking-wider">
                 <th
                   onClick={() => handleSort('billing_month')}
-                  className="py-3 px-4 cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>대상 월</span>
                     {renderSortIcon('billing_month')}
                   </div>
                 </th>
-                <th className="py-3 px-4">산정 기간</th>
+                <th className="py-3 px-4 whitespace-nowrap">산정 기간</th>
                 <th
                   onClick={() => handleSort('storage_cost')}
-                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>Storage 요금</span>
@@ -195,7 +195,7 @@ export default function MonthlyCostHistoryTable({
                 </th>
                 <th
                   onClick={() => handleSort('com_sf_cost')}
-                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>COM_SF 요금</span>
@@ -204,7 +204,7 @@ export default function MonthlyCostHistoryTable({
                 </th>
                 <th
                   onClick={() => handleSort('com_ai_cost')}
-                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>COM_AI 요금</span>
@@ -213,7 +213,7 @@ export default function MonthlyCostHistoryTable({
                 </th>
                 <th
                   onClick={() => handleSort('ai_token_cost')}
-                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>AI_TOKEN 요금</span>
@@ -222,7 +222,7 @@ export default function MonthlyCostHistoryTable({
                 </th>
                 <th
                   onClick={() => handleSort('total_cost')}
-                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>총 확정 요금</span>
@@ -231,73 +231,73 @@ export default function MonthlyCostHistoryTable({
                 </th>
                 <th
                   onClick={() => handleSort('confirmed_at')}
-                  className="py-3 px-4 cursor-pointer hover:bg-zinc-200/60 transition group"
+                  className="py-3 px-4 cursor-pointer hover:bg-zinc-200/60 transition group whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>확정 일시</span>
                     {renderSortIcon('confirmed_at')}
                   </div>
                 </th>
-                <th className="py-3 px-4 text-center">상태</th>
-                <th className="py-3 px-4">비고</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">상태</th>
+                <th className="py-3 px-4 whitespace-nowrap">비고</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {paginatedData.map((item) => (
                 <tr key={item.id} className="hover:bg-zinc-50/80 transition">
-                  <td className="py-3 px-4 font-bold font-mono text-zinc-900 text-sm">
+                  <td className="py-3 px-4 font-bold font-mono text-zinc-900 text-sm whitespace-nowrap">
                     {item.billing_month}
                   </td>
-                  <td className="py-3 px-4 text-zinc-500 font-mono text-[11px]">
+                  <td className="py-3 px-4 text-zinc-500 font-mono text-[11px] whitespace-nowrap">
                     {item.start_date} ~ {item.end_date}
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="font-semibold text-zinc-900 font-mono">
-                      {formatCurrency(item.storage_cost)}
+                      {formatCurrency(item.storage_cost, 4)}
                     </div>
                     <div className="text-[10px] text-zinc-400 font-mono">
-                      {item.storage_tb_avg.toFixed(3)} TB (${item.storage_unit_price}/TB)
+                      {formatNumberExact(item.storage_tb_avg, 4)} TB ({formatCurrency(item.storage_unit_price, 4)}/TB)
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="font-semibold text-zinc-900 font-mono">
-                      {formatCurrency(item.com_sf_cost)}
+                      {formatCurrency(item.com_sf_cost, 4)}
                     </div>
                     <div className="text-[10px] text-zinc-400 font-mono">
-                      {formatCredits(item.com_sf_credits, 2)} Cr (${item.com_sf_unit_price})
+                      {formatCredits(item.com_sf_credits, 4, true)} Cr ({formatCurrency(item.com_sf_unit_price, 4)})
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="font-semibold text-zinc-900 font-mono">
-                      {formatCurrency(item.com_ai_cost)}
+                      {formatCurrency(item.com_ai_cost, 4)}
                     </div>
                     <div className="text-[10px] text-zinc-400 font-mono">
-                      {formatCredits(item.com_ai_credits, 2)} Cr (${item.com_ai_unit_price})
+                      {formatCredits(item.com_ai_credits, 4, true)} Cr ({formatCurrency(item.com_ai_unit_price, 4)})
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="font-semibold text-amber-700 font-mono">
-                      {formatCurrency(item.ai_token_cost)}
+                      {formatCurrency(item.ai_token_cost, 4)}
                     </div>
                     <div className="text-[10px] text-zinc-400 font-mono">
-                      {formatCredits(item.ai_token_credits, 2)} Cr
+                      {formatCredits(item.ai_token_credits, 4, true)} Cr
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="font-extrabold text-sm text-emerald-700 font-mono">
-                      {formatCurrency(item.total_cost)}
+                      {formatCurrency(item.total_cost, 4)}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-zinc-500 font-mono text-[11px]">
+                  <td className="py-3 px-4 text-zinc-500 font-mono text-[11px] whitespace-nowrap">
                     {item.confirmed_at}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">
                       <CheckCircle2 className="h-3 w-3" />
                       ACTIVE
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-zinc-500 text-xs max-w-[150px] truncate" title={item.note || ''}>
+                  <td className="py-3 px-4 text-zinc-500 text-xs whitespace-nowrap max-w-[200px] truncate" title={item.note || ''}>
                     {item.note || '-'}
                   </td>
                 </tr>

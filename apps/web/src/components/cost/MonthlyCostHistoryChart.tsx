@@ -95,9 +95,9 @@ export default function MonthlyCostHistoryChart({
   const yTicks = [0, 0.25, 0.5, 0.75, 1.0].map((ratio) => yMax * ratio);
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-6">
+    <div className="bg-white rounded-xl border border-zinc-200 shadow-2xs p-5 space-y-4">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
         <div>
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-indigo-600" />
@@ -137,7 +137,7 @@ export default function MonthlyCostHistoryChart({
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5">
           <div className="text-[11px] font-medium text-zinc-500 uppercase">조회 기간 합계</div>
           <div className="text-xl font-extrabold text-zinc-900 font-mono mt-1">
-            {formatCurrency(stats.total)}
+            {formatCurrency(stats.total, 4)}
           </div>
           <div className="text-[10px] text-zinc-400 mt-0.5">{chartData.length}개 월 확정분</div>
         </div>
@@ -145,7 +145,7 @@ export default function MonthlyCostHistoryChart({
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5">
           <div className="text-[11px] font-medium text-zinc-500 uppercase">월평균 확정 요금</div>
           <div className="text-xl font-extrabold text-zinc-900 font-mono mt-1">
-            {formatCurrency(stats.avg)}
+            {formatCurrency(stats.avg, 4)}
           </div>
           <div className="text-[10px] text-zinc-400 mt-0.5">월평균 비용</div>
         </div>
@@ -153,7 +153,7 @@ export default function MonthlyCostHistoryChart({
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5">
           <div className="text-[11px] font-medium text-zinc-500 uppercase">최대 요금 발생월</div>
           <div className="text-xl font-extrabold text-indigo-700 font-mono mt-1">
-            {formatCurrency(stats.maxAmount)}
+            {formatCurrency(stats.maxAmount, 4)}
           </div>
           <div className="text-[10px] text-indigo-500 font-medium mt-0.5">{stats.maxMonth}</div>
         </div>
@@ -161,7 +161,7 @@ export default function MonthlyCostHistoryChart({
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5">
           <div className="text-[11px] font-medium text-zinc-500 uppercase">최근 확정월 요금</div>
           <div className="text-xl font-extrabold text-emerald-700 font-mono mt-1">
-            {formatCurrency(stats.latestAmount)}
+            {formatCurrency(stats.latestAmount, 4)}
           </div>
           <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
             {chartData.length > 0 ? chartData[chartData.length - 1].billing_month : '-'}
@@ -388,7 +388,7 @@ export default function MonthlyCostHistoryChart({
                       <span className="w-2 h-2 rounded bg-blue-500"></span>
                       Storage:
                     </span>
-                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].storage_cost)}</span>
+                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].storage_cost, 4)}</span>
                   </div>
 
                   <div className="flex justify-between items-center text-zinc-300">
@@ -396,7 +396,7 @@ export default function MonthlyCostHistoryChart({
                       <span className="w-2 h-2 rounded bg-indigo-500"></span>
                       COM_SF:
                     </span>
-                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].com_sf_cost)}</span>
+                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].com_sf_cost, 4)}</span>
                   </div>
 
                   <div className="flex justify-between items-center text-zinc-300">
@@ -404,7 +404,7 @@ export default function MonthlyCostHistoryChart({
                       <span className="w-2 h-2 rounded bg-violet-500"></span>
                       COM_AI:
                     </span>
-                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].com_ai_cost)}</span>
+                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].com_ai_cost, 4)}</span>
                   </div>
 
                   <div className="flex justify-between items-center text-zinc-300">
@@ -412,12 +412,12 @@ export default function MonthlyCostHistoryChart({
                       <span className="w-2 h-2 rounded bg-amber-500"></span>
                       AI_TOKEN:
                     </span>
-                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].ai_token_cost)}</span>
+                    <span className="font-bold">{formatCurrency(chartData[hoverIndex].ai_token_cost, 4)}</span>
                   </div>
 
                   <div className="border-t border-zinc-700 pt-1.5 mt-1.5 flex justify-between items-center text-white font-bold text-sm">
                     <span>총 확정 요금:</span>
-                    <span className="text-emerald-400">{formatCurrency(chartData[hoverIndex].total_cost)}</span>
+                    <span className="text-emerald-400">{formatCurrency(chartData[hoverIndex].total_cost, 4)}</span>
                   </div>
                 </div>
 
