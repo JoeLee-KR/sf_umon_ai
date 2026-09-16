@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
+echo "=================================================="
+echo "[Project] sf_umon_ai"
+echo "[Local backup only at dev_notebook] 개발코드 local backup: $(date '+%Y-%m-%d %H:%M:%S')"
 
-# 1. 작업 기준 루트 디렉터리 정의 및 강제 이동
+echo "--------------------------------------------------"
+echo "[1/5] 작업 기준 루트 디렉터리 정의 및 강제 이동..."
 TARGET_DIR="$HOME/codes/sf_umon_ai"
 
 if [ ! -d "$TARGET_DIR" ]; then
@@ -11,18 +15,21 @@ fi
 
 cd "$TARGET_DIR"
 
-# 2. 원본 검증
+echo "--------------------------------------------------"
+echo "[2/5] 원본 검증..."
 SRC_DIR="apps/web"
 if [ ! -d "$SRC_DIR" ]; then
   echo "[ERROR] 원본 디렉터리가 존재하지 않습니다: $TARGET_DIR/$SRC_DIR" >&2
   exit 1
 fi
 
-# 3. 오늘 날짜(YYMMDD) 기반 백업 디렉터리 경로 생성
+echo "--------------------------------------------------"
+echo "[3/5] 오늘 날짜(YYMMDD) 기반 백업 디렉터리 경로 생성"
 DATE_TAG=$(date +"%y%m%d")
 DEST_DIR="apps/web_${DATE_TAG}"
 
-# 4. 동일 날짜 디렉터리가 이미 존재할 경우 완전 삭제 후 재생성
+echo "--------------------------------------------------"
+echo "[4/5] 동일 날짜 디렉터리가 이미 존재할 경우 완전 삭제 후 재생성"
 if [ -d "$DEST_DIR" ]; then
   echo "[INFO] 오늘자 백업(${DEST_DIR})이 이미 존재하여 기존 본을 삭제합니다..."
   rm -rf "$DEST_DIR"
@@ -38,4 +45,6 @@ rsync -a \
   --exclude='.turbo' \
   "$SRC_DIR/" "$DEST_DIR/"
 
+echo "--------------------------------------------------"
 echo "[SUCCESS] 백업 완료: $(pwd)/$DEST_DIR"
+echo "=================================================="
