@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Sliders, ChevronLeft, ChevronRight, HardDrive, Cpu } from 'lucide-react';
+import { LayoutDashboard, Users, Sliders, ChevronLeft, ChevronRight, HardDrive, Cpu, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
@@ -14,8 +14,9 @@ export default function Sidebar() {
     { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
     { label: '스토리지 사용량 조회', href: '/storage', icon: HardDrive },
     { label: '컴퓨트 사용량 조회', href: '/compute', icon: Cpu },
-    { label: '임직원 통계/원천', href: '/employees', icon: Users },
+    { label: '월 비용 확인', href: '/cost', icon: CircleDollarSign },
     { label: '설정 관리', href: '/settings', icon: Sliders },
+    { label: '(테스트)직원연봉', href: '/employees', icon: Users },
   ];
 
   return (

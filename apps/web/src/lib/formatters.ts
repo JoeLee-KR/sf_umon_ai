@@ -60,3 +60,19 @@ export function formatCreditsCompact(credits: number): string {
   }
   return credits.toFixed(2);
 }
+
+export function formatCurrency(
+  amount: number,
+  decimals: number = 2,
+  includeDollarSign: boolean = true
+): string {
+  if (amount === 0 || isNaN(amount)) {
+    const zero = (0).toFixed(decimals);
+    return includeDollarSign ? `$${zero}` : zero;
+  }
+  const formatted = amount.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return includeDollarSign ? `$${formatted}` : formatted;
+}

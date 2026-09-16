@@ -12,6 +12,12 @@ import {
   COM_AI_SERVICES,
   AI_TOKEN_SERVICES,
 } from '@/types/compute';
+import {
+  MonthlyBillingRecord,
+  MonthlyUsageRawData,
+  MonthlyCostCalculateResponse,
+  MonthlyCostHistoryResponse,
+} from '@/types/cost';
 
 export function calculateDepartmentStats(employees: Employee[]): DepartmentStat[] {
   const map = new Map<string, { count: number; maxSalary: number; minSalary: number; totalSalary: number }>();
@@ -625,6 +631,479 @@ export async function fetchComputeUsage(options?: {
       db_host: host,
       db_name: database,
       db_user: user,
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+export function getPreviousMonthString(): string {
+  const d = new Date();
+  d.setDate(1); // month overflow 방지
+  d.setMonth(d.getMonth() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+export function getMonthDateRange(monthStr: string): { startDate: string; endDate: string } {
+  let [yearStr, monthPart] = monthStr.split('-');
+  let year = parseInt(yearStr, 10);
+  let month = parseInt(monthPart, 10);
+
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+    const prev = getPreviousMonthString();
+    [yearStr, monthPart] = prev.split('-');
+    year = parseInt(yearStr, 10);
+    month = parseInt(monthPart, 10);
+  }
+
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  return { startDate, endDate };
+}
+
+export async function ensureMonthlyBillingTable(connection: mysql.Connection): Promise<void> {
+  const createTableSql = `
+    CREATE TABLE IF NOT EXISTS sf_monthly_billing (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      billing_month VARCHAR(7) NOT NULL,
+      start_date VARCHAR(10) NOT NULL,
+      end_date VARCHAR(10) NOT NULL,
+      storage_tb_avg DOUBLE NOT NULL DEFAULT 0,
+      storage_unit_price DOUBLE NOT NULL DEFAULT 5.225,
+      storage_cost DOUBLE NOT NULL DEFAULT 0,
+      com_sf_credits DOUBLE NOT NULL DEFAULT 0,
+      com_sf_unit_price DOUBLE NOT NULL DEFAULT 2.0,
+      com_sf_cost DOUBLE NOT NULL DEFAULT 0,
+      com_ai_credits DOUBLE NOT NULL DEFAULT 0,
+      com_ai_unit_price DOUBLE NOT NULL DEFAULT 2.0,
+      com_ai_cost DOUBLE NOT NULL DEFAULT 0,
+      ai_token_credits DOUBLE NOT NULL DEFAULT 0,
+      ai_token_cost DOUBLE NOT NULL DEFAULT 0,
+      total_cost DOUBLE NOT NULL DEFAULT 0,
+      status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE',
+      note TEXT NULL,
+      confirmed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_billing_month (billing_month),
+      INDEX idx_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `;
+  await connection.query(createTableSql);
+}
+
+export async function fetchMonthlyCostCalculation(
+  monthParam?: string
+): Promise<MonthlyCostCalculateResponse> {
+  const host = process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.MYSQL_PORT) || 3306;
+  const user = process.env.MYSQL_USER || 'root';
+  const password = process.env.MYSQL_PASSWORD || '';
+  const database = process.env.MYSQL_DATABASE || 'sf_umon_db';
+
+  const connection = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    database,
+    connectTimeout: 2000,
+  });
+
+  try {
+    await ensureMonthlyBillingTable(connection);
+
+    const targetMonth = monthParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)
+      ? monthParam
+      : getPreviousMonthString();
+
+    const { startDate, endDate } = getMonthDateRange(targetMonth);
+
+    // 1. Fetch storage usage for the month (1st to last day)
+    const storageQuery = `
+      SELECT storage_bytes, stage_bytes, failsafe_bytes
+      FROM sf_storage_usage
+      WHERE usage_date >= ? AND usage_date <= ?
+    `;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [storageRows]: [any[], any] = await connection.query(storageQuery, [startDate, endDate]);
+
+    let storageSumBytes = 0;
+    const storageCount = Array.isArray(storageRows) ? storageRows.length : 0;
+    if (storageCount > 0) {
+      for (const row of storageRows) {
+        storageSumBytes += Number(row.storage_bytes) || 0;
+      }
+    }
+    const storageAvgBytes = storageCount > 0 ? storageSumBytes / storageCount : 0;
+    const bytesInTb = 1024 * 1024 * 1024 * 1024; // 1 TiB
+    const storageAvgTb = Number((storageAvgBytes / bytesInTb).toFixed(6));
+
+    // 2. Fetch compute usage for the month (1st to last day)
+    const computeQuery = `
+      SELECT service_type, credits_billed
+      FROM sf_metering_daily_history
+      WHERE usage_date >= ? AND usage_date <= ?
+    `;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [computeRows]: [any[], any] = await connection.query(computeQuery, [startDate, endDate]);
+
+    let comSfCredits = 0;
+    let comAiCredits = 0;
+    let aiTokenCredits = 0;
+    const computeCount = Array.isArray(computeRows) ? computeRows.length : 0;
+
+    if (computeCount > 0) {
+      for (const row of computeRows) {
+        const group = classifyServiceType(row.service_type);
+        const billed = Number(row.credits_billed) || 0;
+        if (group === 'COM_SF') {
+          comSfCredits += billed;
+        } else if (group === 'COM_AI') {
+          comAiCredits += billed;
+        } else if (group === 'AI_TOKEN') {
+          aiTokenCredits += billed;
+        } else {
+          comSfCredits += billed;
+        }
+      }
+    }
+
+    comSfCredits = Number(comSfCredits.toFixed(6));
+    comAiCredits = Number(comAiCredits.toFixed(6));
+    aiTokenCredits = Number(aiTokenCredits.toFixed(6));
+    const totalCredits = Number((comSfCredits + comAiCredits + aiTokenCredits).toFixed(6));
+
+    const usage: MonthlyUsageRawData = {
+      month: targetMonth,
+      startDate,
+      endDate,
+      storageAvgBytes: Math.round(storageAvgBytes),
+      storageAvgTb,
+      storageRecordCount: storageCount,
+      comSfCredits,
+      comAiCredits,
+      aiTokenCredits,
+      totalCredits,
+      computeRecordCount: computeCount,
+    };
+
+    // 3. Check if there is already an ACTIVE confirmed record for this month
+    const confirmedQuery = `
+      SELECT 
+        id,
+        billing_month,
+        start_date,
+        end_date,
+        storage_tb_avg,
+        storage_unit_price,
+        storage_cost,
+        com_sf_credits,
+        com_sf_unit_price,
+        com_sf_cost,
+        com_ai_credits,
+        com_ai_unit_price,
+        com_ai_cost,
+        ai_token_credits,
+        ai_token_cost,
+        total_cost,
+        status,
+        note,
+        DATE_FORMAT(confirmed_at, '%Y-%m-%d %H:%i:%s') as confirmed_at,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+        DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at
+      FROM sf_monthly_billing
+      WHERE billing_month = ? AND status = 'ACTIVE'
+      LIMIT 1
+    `;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [confirmedRows]: [any[], any] = await connection.query(confirmedQuery, [targetMonth]);
+
+    let confirmedRecord: MonthlyBillingRecord | null = null;
+    if (Array.isArray(confirmedRows) && confirmedRows.length > 0) {
+      const cr = confirmedRows[0];
+      confirmedRecord = {
+        id: Number(cr.id),
+        billing_month: String(cr.billing_month),
+        start_date: String(cr.start_date),
+        end_date: String(cr.end_date),
+        storage_tb_avg: Number(cr.storage_tb_avg) || 0,
+        storage_unit_price: Number(cr.storage_unit_price) || 0,
+        storage_cost: Number(cr.storage_cost) || 0,
+        com_sf_credits: Number(cr.com_sf_credits) || 0,
+        com_sf_unit_price: Number(cr.com_sf_unit_price) || 0,
+        com_sf_cost: Number(cr.com_sf_cost) || 0,
+        com_ai_credits: Number(cr.com_ai_credits) || 0,
+        com_ai_unit_price: Number(cr.com_ai_unit_price) || 0,
+        com_ai_cost: Number(cr.com_ai_cost) || 0,
+        ai_token_credits: Number(cr.ai_token_credits) || 0,
+        ai_token_cost: Number(cr.ai_token_cost) || 0,
+        total_cost: Number(cr.total_cost) || 0,
+        status: 'ACTIVE',
+        note: cr.note ? String(cr.note) : undefined,
+        confirmed_at: String(cr.confirmed_at),
+        created_at: cr.created_at ? String(cr.created_at) : undefined,
+        updated_at: cr.updated_at ? String(cr.updated_at) : undefined,
+      };
+    }
+
+    return {
+      usage,
+      defaults: {
+        storageUnitPrice: 5.225,
+        comSfUnitPrice: 2.0,
+        comAiUnitPrice: 2.0,
+        aiTokenCost: confirmedRecord ? confirmedRecord.ai_token_cost : 0,
+      },
+      confirmedRecord,
+      source: 'mysql',
+      message: '월 사용량 데이터 조회 성공',
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function confirmMonthlyBilling(payload: {
+  billing_month: string;
+  start_date: string;
+  end_date: string;
+  storage_tb_avg: number;
+  storage_unit_price: number;
+  storage_cost: number;
+  com_sf_credits: number;
+  com_sf_unit_price: number;
+  com_sf_cost: number;
+  com_ai_credits: number;
+  com_ai_unit_price: number;
+  com_ai_cost: number;
+  ai_token_credits: number;
+  ai_token_cost: number;
+  total_cost: number;
+  note?: string;
+}): Promise<MonthlyBillingRecord> {
+  const host = process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.MYSQL_PORT) || 3306;
+  const user = process.env.MYSQL_USER || 'root';
+  const password = process.env.MYSQL_PASSWORD || '';
+  const database = process.env.MYSQL_DATABASE || 'sf_umon_db';
+
+  const connection = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    database,
+    connectTimeout: 2000,
+  });
+
+  try {
+    await ensureMonthlyBillingTable(connection);
+
+    // 1. Inactivate existing ACTIVE records for the same month
+    await connection.query(
+      `UPDATE sf_monthly_billing SET status = 'INACTIVE' WHERE billing_month = ? AND status = 'ACTIVE'`,
+      [payload.billing_month]
+    );
+
+    // 2. Insert new ACTIVE record
+    const insertSql = `
+      INSERT INTO sf_monthly_billing (
+        billing_month,
+        start_date,
+        end_date,
+        storage_tb_avg,
+        storage_unit_price,
+        storage_cost,
+        com_sf_credits,
+        com_sf_unit_price,
+        com_sf_cost,
+        com_ai_credits,
+        com_ai_unit_price,
+        com_ai_cost,
+        ai_token_credits,
+        ai_token_cost,
+        total_cost,
+        status,
+        note,
+        confirmed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, NOW())
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [result]: [any, any] = await connection.query(insertSql, [
+      payload.billing_month,
+      payload.start_date,
+      payload.end_date,
+      payload.storage_tb_avg,
+      payload.storage_unit_price,
+      payload.storage_cost,
+      payload.com_sf_credits,
+      payload.com_sf_unit_price,
+      payload.com_sf_cost,
+      payload.com_ai_credits,
+      payload.com_ai_unit_price,
+      payload.com_ai_cost,
+      payload.ai_token_credits,
+      payload.ai_token_cost,
+      payload.total_cost,
+      payload.note || null,
+    ]);
+
+    const newId = Number(result.insertId);
+
+    // Fetch newly created record
+    const [rows]: [any[], any] = await connection.query(
+      `SELECT 
+        id,
+        billing_month,
+        start_date,
+        end_date,
+        storage_tb_avg,
+        storage_unit_price,
+        storage_cost,
+        com_sf_credits,
+        com_sf_unit_price,
+        com_sf_cost,
+        com_ai_credits,
+        com_ai_unit_price,
+        com_ai_cost,
+        ai_token_credits,
+        ai_token_cost,
+        total_cost,
+        status,
+        note,
+        DATE_FORMAT(confirmed_at, '%Y-%m-%d %H:%i:%s') as confirmed_at,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+        DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at
+      FROM sf_monthly_billing
+      WHERE id = ?`,
+      [newId]
+    );
+
+    const r = rows[0];
+    return {
+      id: Number(r.id),
+      billing_month: String(r.billing_month),
+      start_date: String(r.start_date),
+      end_date: String(r.end_date),
+      storage_tb_avg: Number(r.storage_tb_avg) || 0,
+      storage_unit_price: Number(r.storage_unit_price) || 0,
+      storage_cost: Number(r.storage_cost) || 0,
+      com_sf_credits: Number(r.com_sf_credits) || 0,
+      com_sf_unit_price: Number(r.com_sf_unit_price) || 0,
+      com_sf_cost: Number(r.com_sf_cost) || 0,
+      com_ai_credits: Number(r.com_ai_credits) || 0,
+      com_ai_unit_price: Number(r.com_ai_unit_price) || 0,
+      com_ai_cost: Number(r.com_ai_cost) || 0,
+      ai_token_credits: Number(r.ai_token_credits) || 0,
+      ai_token_cost: Number(r.ai_token_cost) || 0,
+      total_cost: Number(r.total_cost) || 0,
+      status: 'ACTIVE',
+      note: r.note ? String(r.note) : undefined,
+      confirmed_at: String(r.confirmed_at),
+      created_at: r.created_at ? String(r.created_at) : undefined,
+      updated_at: r.updated_at ? String(r.updated_at) : undefined,
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function fetchMonthlyBillingHistory(options?: {
+  monthsLimit?: number;
+}): Promise<MonthlyCostHistoryResponse> {
+  const host = process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.MYSQL_PORT) || 3306;
+  const user = process.env.MYSQL_USER || 'root';
+  const password = process.env.MYSQL_PASSWORD || '';
+  const database = process.env.MYSQL_DATABASE || 'sf_umon_db';
+
+  const connection = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    database,
+    connectTimeout: 2000,
+  });
+
+  try {
+    await ensureMonthlyBillingTable(connection);
+
+    let query = `
+      SELECT 
+        id,
+        billing_month,
+        start_date,
+        end_date,
+        storage_tb_avg,
+        storage_unit_price,
+        storage_cost,
+        com_sf_credits,
+        com_sf_unit_price,
+        com_sf_cost,
+        com_ai_credits,
+        com_ai_unit_price,
+        com_ai_cost,
+        ai_token_credits,
+        ai_token_cost,
+        total_cost,
+        status,
+        note,
+        DATE_FORMAT(confirmed_at, '%Y-%m-%d %H:%i:%s') as confirmed_at,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+        DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at
+      FROM sf_monthly_billing
+      WHERE status = 'ACTIVE'
+      ORDER BY billing_month DESC
+    `;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let params: any[] = [];
+
+    if (options?.monthsLimit && options.monthsLimit > 0) {
+      query += ` LIMIT ?`;
+      params = [options.monthsLimit];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [rows]: [any[], any] = await connection.query(query, params);
+
+    const data: MonthlyBillingRecord[] = Array.isArray(rows)
+      ? rows.map((r: any) => ({
+          id: Number(r.id),
+          billing_month: String(r.billing_month),
+          start_date: String(r.start_date),
+          end_date: String(r.end_date),
+          storage_tb_avg: Number(r.storage_tb_avg) || 0,
+          storage_unit_price: Number(r.storage_unit_price) || 0,
+          storage_cost: Number(r.storage_cost) || 0,
+          com_sf_credits: Number(r.com_sf_credits) || 0,
+          com_sf_unit_price: Number(r.com_sf_unit_price) || 0,
+          com_sf_cost: Number(r.com_sf_cost) || 0,
+          com_ai_credits: Number(r.com_ai_credits) || 0,
+          com_ai_unit_price: Number(r.com_ai_unit_price) || 0,
+          com_ai_cost: Number(r.com_ai_cost) || 0,
+          ai_token_credits: Number(r.ai_token_credits) || 0,
+          ai_token_cost: Number(r.ai_token_cost) || 0,
+          total_cost: Number(r.total_cost) || 0,
+          status: 'ACTIVE',
+          note: r.note ? String(r.note) : undefined,
+          confirmed_at: String(r.confirmed_at),
+          created_at: r.created_at ? String(r.created_at) : undefined,
+          updated_at: r.updated_at ? String(r.updated_at) : undefined,
+        }))
+      : [];
+
+    return {
+      data,
+      totalMonths: data.length,
+      source: 'mysql',
+      message: '월별 확정 요금 히스토리 조회 성공',
     };
   } finally {
     await connection.end();
