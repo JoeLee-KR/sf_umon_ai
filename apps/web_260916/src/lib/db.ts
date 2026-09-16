@@ -1,6 +1,17 @@
 import mysql from 'mysql2/promise';
 import { Employee, DepartmentStat } from '@/types/employee';
 import { StorageUsage, StorageUsageResponse, StorageUsageSummary } from '@/types/storage';
+import {
+  ComputeRawUsage,
+  ComputeDailyUsage,
+  ComputeUsageResponse,
+  ComputeUsageSummary,
+  ComputeServiceGroup,
+  MetricStats,
+  COM_SF_SERVICES,
+  COM_AI_SERVICES,
+  AI_TOKEN_SERVICES,
+} from '@/types/compute';
 
 export function calculateDepartmentStats(employees: Employee[]): DepartmentStat[] {
   const map = new Map<string, { count: number; maxSalary: number; minSalary: number; totalSalary: number }>();
@@ -292,6 +303,325 @@ export async function fetchStorageUsage(options?: {
       summary: calculateStorageSummary(currentData),
       source: 'mysql',
       message: 'MySQL sf_umon_db.sf_storage_usage 실시간 연결 성공',
+      db_host: host,
+      db_name: database,
+      db_user: user,
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+const COM_SF_SET = new Set<string>(COM_SF_SERVICES);
+const COM_AI_SET = new Set<string>([
+  ...COM_AI_SERVICES,
+  'SNOWFLAKE_CODE_SNOWSIGHT',
+]);
+const AI_TOKEN_SET = new Set<string>(AI_TOKEN_SERVICES);
+
+export function classifyServiceType(serviceType: string): ComputeServiceGroup {
+  const norm = (serviceType || '').trim().toUpperCase();
+  if (COM_SF_SET.has(norm)) return 'COM_SF';
+  if (COM_AI_SET.has(norm)) return 'COM_AI';
+  if (AI_TOKEN_SET.has(norm)) return 'AI_TOKEN';
+  return 'COM_SF';
+}
+
+export function aggregateComputeDaily(rawData: ComputeRawUsage[]): ComputeDailyUsage[] {
+  const map = new Map<string, { com_sf: number; com_ai: number; ai_token: number }>();
+
+  for (const item of rawData) {
+    const date = item.usage_date;
+    if (!date) continue;
+    const billed = Number(item.credits_billed) || 0;
+    const group = item.service_group || classifyServiceType(item.service_type);
+
+    if (!map.has(date)) {
+      map.set(date, { com_sf: 0, com_ai: 0, ai_token: 0 });
+    }
+
+    const current = map.get(date)!;
+    if (group === 'COM_SF') {
+      current.com_sf += billed;
+    } else if (group === 'COM_AI') {
+      current.com_ai += billed;
+    } else if (group === 'AI_TOKEN') {
+      current.ai_token += billed;
+    } else {
+      current.com_sf += billed;
+    }
+  }
+
+  const result: ComputeDailyUsage[] = [];
+  map.forEach((val, usage_date) => {
+    result.push({
+      usage_date,
+      com_sf: Number(val.com_sf.toFixed(6)),
+      com_ai: Number(val.com_ai.toFixed(6)),
+      ai_token: Number(val.ai_token.toFixed(6)),
+      total_credits: Number((val.com_sf + val.com_ai + val.ai_token).toFixed(6)),
+    });
+  });
+
+  // Sort by date asc for charting
+  return result.sort((a, b) => a.usage_date.localeCompare(b.usage_date));
+}
+
+export function calculateComputeSummary(
+  dailyData: ComputeDailyUsage[],
+  rawData: ComputeRawUsage[]
+): ComputeUsageSummary {
+  const emptyStats = (): MetricStats => ({
+    latest: 0,
+    max: 0,
+    avg: 0,
+    min: 0,
+    total: 0,
+  });
+
+  if (dailyData.length === 0) {
+    return {
+      comSf: emptyStats(),
+      comAi: emptyStats(),
+      aiToken: emptyStats(),
+      totalCreditsStat: emptyStats(),
+      latestComSf: 0,
+      latestComAi: 0,
+      latestAiToken: 0,
+      latestTotalCredits: 0,
+      totalComSf: 0,
+      totalComAi: 0,
+      totalAiToken: 0,
+      totalCredits: 0,
+      avgDailyCredits: 0,
+      maxDailyCredits: 0,
+      minDailyCredits: 0,
+      totalRecords: 0,
+    };
+  }
+
+  // dailyData is sorted asc, so last item is latest
+  const latest = dailyData[dailyData.length - 1];
+  const count = dailyData.length;
+
+  let totalComSf = 0;
+  let totalComAi = 0;
+  let totalAiToken = 0;
+  let totalCredits = 0;
+
+  let maxComSf = -Infinity;
+  let minComSf = Infinity;
+
+  let maxComAi = -Infinity;
+  let minComAi = Infinity;
+
+  let maxAiToken = -Infinity;
+  let minAiToken = Infinity;
+
+  let maxTotalCredits = -Infinity;
+  let minTotalCredits = Infinity;
+
+  for (const item of dailyData) {
+    totalComSf += item.com_sf;
+    totalComAi += item.com_ai;
+    totalAiToken += item.ai_token;
+    totalCredits += item.total_credits;
+
+    if (item.com_sf > maxComSf) maxComSf = item.com_sf;
+    if (item.com_sf < minComSf) minComSf = item.com_sf;
+
+    if (item.com_ai > maxComAi) maxComAi = item.com_ai;
+    if (item.com_ai < minComAi) minComAi = item.com_ai;
+
+    if (item.ai_token > maxAiToken) maxAiToken = item.ai_token;
+    if (item.ai_token < minAiToken) minAiToken = item.ai_token;
+
+    if (item.total_credits > maxTotalCredits) maxTotalCredits = item.total_credits;
+    if (item.total_credits < minTotalCredits) minTotalCredits = item.total_credits;
+  }
+
+  const comSfStats: MetricStats = {
+    latest: Number(latest.com_sf.toFixed(6)),
+    max: maxComSf === -Infinity ? 0 : Number(maxComSf.toFixed(6)),
+    avg: Number((totalComSf / count).toFixed(6)),
+    min: minComSf === Infinity ? 0 : Number(minComSf.toFixed(6)),
+    total: Number(totalComSf.toFixed(6)),
+  };
+
+  const comAiStats: MetricStats = {
+    latest: Number(latest.com_ai.toFixed(6)),
+    max: maxComAi === -Infinity ? 0 : Number(maxComAi.toFixed(6)),
+    avg: Number((totalComAi / count).toFixed(6)),
+    min: minComAi === Infinity ? 0 : Number(minComAi.toFixed(6)),
+    total: Number(totalComAi.toFixed(6)),
+  };
+
+  const aiTokenStats: MetricStats = {
+    latest: Number(latest.ai_token.toFixed(6)),
+    max: maxAiToken === -Infinity ? 0 : Number(maxAiToken.toFixed(6)),
+    avg: Number((totalAiToken / count).toFixed(6)),
+    min: minAiToken === Infinity ? 0 : Number(minAiToken.toFixed(6)),
+    total: Number(totalAiToken.toFixed(6)),
+  };
+
+  const totalCreditsStats: MetricStats = {
+    latest: Number(latest.total_credits.toFixed(6)),
+    max: maxTotalCredits === -Infinity ? 0 : Number(maxTotalCredits.toFixed(6)),
+    avg: Number((totalCredits / count).toFixed(6)),
+    min: minTotalCredits === Infinity ? 0 : Number(minTotalCredits.toFixed(6)),
+    total: Number(totalCredits.toFixed(6)),
+  };
+
+  return {
+    comSf: comSfStats,
+    comAi: comAiStats,
+    aiToken: aiTokenStats,
+    totalCreditsStat: totalCreditsStats,
+
+    latestComSf: comSfStats.latest,
+    latestComAi: comAiStats.latest,
+    latestAiToken: aiTokenStats.latest,
+    latestTotalCredits: totalCreditsStats.latest,
+    totalComSf: comSfStats.total,
+    totalComAi: comAiStats.total,
+    totalAiToken: aiTokenStats.total,
+    totalCredits: totalCreditsStats.total,
+    avgDailyCredits: totalCreditsStats.avg,
+    maxDailyCredits: totalCreditsStats.max,
+    minDailyCredits: totalCreditsStats.min,
+    totalRecords: rawData.length,
+  };
+}
+
+export async function fetchComputeUsage(options?: {
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<ComputeUsageResponse> {
+  const host = process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.MYSQL_PORT) || 3306;
+  const user = process.env.MYSQL_USER || 'root';
+  const password = process.env.MYSQL_PASSWORD || '';
+  const database = process.env.MYSQL_DATABASE || 'sf_umon_db';
+
+  const connection = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    database,
+    connectTimeout: 2000,
+  });
+
+  try {
+    let query = '';
+    let params: (string | number)[] = [];
+
+    const days = options?.days;
+    const startDate = options?.startDate;
+    const endDate = options?.endDate;
+
+    if (days && days > 0) {
+      query = `
+        SELECT 
+          pkid,
+          service_type,
+          DATE_FORMAT(usage_date, '%Y-%m-%d') as usage_date,
+          credits_used_compute,
+          credits_used_cloud_services,
+          credits_used,
+          credits_adjustment_cloud_services,
+          credits_billed,
+          DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
+        FROM sf_metering_daily_history
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        ORDER BY usage_date DESC, pkid DESC
+      `;
+      params = [days - 1];
+    } else if (startDate && endDate) {
+      query = `
+        SELECT 
+          pkid,
+          service_type,
+          DATE_FORMAT(usage_date, '%Y-%m-%d') as usage_date,
+          credits_used_compute,
+          credits_used_cloud_services,
+          credits_used,
+          credits_adjustment_cloud_services,
+          credits_billed,
+          DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
+        FROM sf_metering_daily_history
+        WHERE usage_date >= ? AND usage_date <= ?
+        ORDER BY usage_date DESC, pkid DESC
+      `;
+      params = [startDate, endDate];
+    } else {
+      query = `
+        SELECT 
+          pkid,
+          service_type,
+          DATE_FORMAT(usage_date, '%Y-%m-%d') as usage_date,
+          credits_used_compute,
+          credits_used_cloud_services,
+          credits_used,
+          credits_adjustment_cloud_services,
+          credits_billed,
+          DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
+        FROM sf_metering_daily_history
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+        ORDER BY usage_date DESC, pkid DESC
+      `;
+      params = [];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [rows, fields]: [any[], any] = await connection.query(query, params);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapRow = (r: any): ComputeRawUsage => {
+      const st = String(r.service_type || '');
+      const item: ComputeRawUsage = {
+        service_type: st,
+        usage_date: String(r.usage_date),
+        credits_used_compute: Number(r.credits_used_compute) || 0,
+        credits_used_cloud_services: Number(r.credits_used_cloud_services) || 0,
+        credits_used: Number(r.credits_used) || 0,
+        credits_adjustment_cloud_services: Number(r.credits_adjustment_cloud_services) || 0,
+        credits_billed: Number(r.credits_billed) || 0,
+        service_group: classifyServiceType(st),
+      };
+      if (r.pkid !== undefined && r.pkid !== null) item.pkid = Number(r.pkid);
+      if (r.up_dt) item.up_dt = String(r.up_dt);
+      return item;
+    };
+
+    const currentData = Array.isArray(rows) ? rows.map(mapRow) : [];
+    const dailyData = aggregateComputeDaily(currentData);
+    const summary = calculateComputeSummary(dailyData, currentData);
+
+    // Columns
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const columns = Array.isArray(fields)
+      ? fields.map((f: any) => f.name)
+      : [
+          'pkid',
+          'service_type',
+          'usage_date',
+          'credits_used_compute',
+          'credits_used_cloud_services',
+          'credits_used',
+          'credits_adjustment_cloud_services',
+          'credits_billed',
+          'up_dt',
+        ];
+
+    return {
+      currentData,
+      dailyData,
+      columns,
+      summary,
+      source: 'mysql',
+      message: 'MySQL sf_umon_db.sf_metering_daily_history 실시간 연결 성공',
       db_host: host,
       db_name: database,
       db_user: user,

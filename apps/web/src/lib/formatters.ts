@@ -29,3 +29,34 @@ export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
   return dateStr.substring(0, 10);
 }
+
+export function formatCredits(
+  credits: number,
+  decimals: number = 4,
+  exactDecimals: boolean = false
+): string {
+  if (credits === 0 || isNaN(credits)) {
+    if (exactDecimals) {
+      return (0).toFixed(decimals);
+    }
+    return decimals === 6 ? '0.000000' : '0.0000';
+  }
+  return credits.toLocaleString(undefined, {
+    minimumFractionDigits: exactDecimals ? decimals : Math.min(2, decimals),
+    maximumFractionDigits: decimals,
+  });
+}
+
+export function formatCreditsCompact(credits: number): string {
+  if (credits === 0 || isNaN(credits)) return '0';
+  if (Math.abs(credits) >= 1_000_000) {
+    return `${(credits / 1_000_000).toFixed(1)}M`;
+  }
+  if (Math.abs(credits) >= 1_000) {
+    return `${(credits / 1_000).toFixed(1)}k`;
+  }
+  if (credits % 1 === 0) {
+    return credits.toFixed(0);
+  }
+  return credits.toFixed(2);
+}

@@ -20,16 +20,17 @@ export type RangeOption = 'days' | 'custom';
 interface StorageChartProps {
   currentData: StorageUsage[];
   previousData?: StorageUsage[];
-  selectedRange: RangeOption;
-  onRangeChange: (range: RangeOption) => void;
-  days: number;
-  onDaysChange: (days: number) => void;
-  startDate: string;
-  endDate: string;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
-  onFetchCustomRange: () => void;
+  selectedRange?: RangeOption;
+  onRangeChange?: (range: RangeOption) => void;
+  days?: number;
+  onDaysChange?: (days: number) => void;
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (date: string) => void;
+  onEndDateChange?: (date: string) => void;
+  onFetchCustomRange?: () => void;
   isLoading?: boolean;
+  hideRangeControls?: boolean;
 }
 
 /**
@@ -136,16 +137,17 @@ export function calculateInitialScale(data: StorageUsage[]) {
 
 export default function StorageChart({
   currentData,
-  selectedRange,
-  onRangeChange,
-  days,
-  onDaysChange,
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-  onFetchCustomRange,
+  selectedRange = 'days',
+  onRangeChange = () => {},
+  days = 30,
+  onDaysChange = () => {},
+  startDate = '',
+  endDate = '',
+  onStartDateChange = () => {},
+  onEndDateChange = () => {},
+  onFetchCustomRange = () => {},
   isLoading = false,
+  hideRangeControls = false,
 }: StorageChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -326,70 +328,72 @@ export default function StorageChart({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-zinc-100">
         <div className="flex flex-wrap items-center gap-3">
           {/* 기간 선택 (현재 기준 일수 +10, -10 조절 및 직접 날짜 지정) */}
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 p-1 text-xs font-semibold text-zinc-600">
-            {/* -10일 버튼 */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextDays = Math.max(10, days - 10);
-                onDaysChange(nextDays);
-                if (selectedRange !== 'days') onRangeChange('days');
-              }}
-              disabled={selectedRange === 'days' && days <= 10}
-              title="10일 감소 (최소 10일)"
-              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md bg-white hover:bg-zinc-50 border border-zinc-200/80 text-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
-            >
-              <Minus className="h-3 w-3" />
-              <span>10일</span>
-            </button>
+          {!hideRangeControls && (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 p-1 text-xs font-semibold text-zinc-600">
+              {/* -10일 버튼 */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextDays = Math.max(10, days - 10);
+                  onDaysChange(nextDays);
+                  if (selectedRange !== 'days') onRangeChange('days');
+                }}
+                disabled={selectedRange === 'days' && days <= 10}
+                title="10일 감소 (최소 10일)"
+                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md bg-white hover:bg-zinc-50 border border-zinc-200/80 text-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+              >
+                <Minus className="h-3 w-3" />
+                <span>10일</span>
+              </button>
 
-            {/* 현재 기준 N일 표시 버튼 */}
-            <button
-              type="button"
-              onClick={() => onRangeChange('days')}
-              className={`px-3 py-1 rounded-md transition ${
-                selectedRange === 'days'
-                  ? 'bg-white text-zinc-900 shadow-xs font-bold border border-zinc-200/80'
-                  : 'hover:text-zinc-900'
-              }`}
-            >
-              최근 {days}일
-            </button>
+              {/* 현재 기준 N일 표시 버튼 */}
+              <button
+                type="button"
+                onClick={() => onRangeChange('days')}
+                className={`px-3 py-1 rounded-md transition ${
+                  selectedRange === 'days'
+                    ? 'bg-white text-zinc-900 shadow-xs font-bold border border-zinc-200/80'
+                    : 'hover:text-zinc-900'
+                }`}
+              >
+                최근 {days}일
+              </button>
 
-            {/* +10일 버튼 */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextDays = Math.min(180, days + 10);
-                onDaysChange(nextDays);
-                if (selectedRange !== 'days') onRangeChange('days');
-              }}
-              disabled={selectedRange === 'days' && days >= 180}
-              title="10일 증가 (최대 180일)"
-              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md bg-white hover:bg-zinc-50 border border-zinc-200/80 text-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
-            >
-              <Plus className="h-3 w-3" />
-              <span>10일</span>
-            </button>
+              {/* +10일 버튼 */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextDays = Math.min(180, days + 10);
+                  onDaysChange(nextDays);
+                  if (selectedRange !== 'days') onRangeChange('days');
+                }}
+                disabled={selectedRange === 'days' && days >= 180}
+                title="10일 증가 (최대 180일)"
+                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md bg-white hover:bg-zinc-50 border border-zinc-200/80 text-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+              >
+                <Plus className="h-3 w-3" />
+                <span>10일</span>
+              </button>
 
-            <div className="h-4 w-px bg-zinc-300 mx-0.5" />
+              <div className="h-4 w-px bg-zinc-300 mx-0.5" />
 
-            {/* 직접 날짜선택 탭 */}
-            <button
-              type="button"
-              onClick={() => onRangeChange('custom')}
-              className={`px-3 py-1 rounded-md transition ${
-                selectedRange === 'custom'
-                  ? 'bg-white text-zinc-900 shadow-xs font-bold border border-zinc-200/80'
-                  : 'hover:text-zinc-900'
-              }`}
-            >
-              직접지정
-            </button>
-          </div>
+              {/* 직접 날짜선택 탭 */}
+              <button
+                type="button"
+                onClick={() => onRangeChange('custom')}
+                className={`px-3 py-1 rounded-md transition ${
+                  selectedRange === 'custom'
+                    ? 'bg-white text-zinc-900 shadow-xs font-bold border border-zinc-200/80'
+                    : 'hover:text-zinc-900'
+                }`}
+              >
+                직접지정
+              </button>
+            </div>
+          )}
 
           {/* 그래프 Y축 범위 (최소값, 최대값 10단위 조절) */}
-          <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-3 border-t sm:border-t-0 sm:border-l border-zinc-200">
+          <div className={`flex flex-wrap items-center gap-2 ${hideRangeControls ? '' : 'pl-0 sm:pl-3 border-t sm:border-t-0 sm:border-l border-zinc-200'}`}>
             {/* Min 조절 */}
             <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1 text-xs">
               <span className="text-zinc-500 font-medium">최소:</span>

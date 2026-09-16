@@ -12,21 +12,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Environment & Binary Execution Context for AI Agent (Junie Pro)
 
 The host development machine uses **fnm (Fast Node Manager)** on macOS.
-Background subshells spawned by IDE agents do not inherit dynamic multi-shell shims.
-When executing shell tasks (installing dependencies, running builds, running dev servers, or triggering Prisma CLI commands), adhere strictly to the following execution context:
-
-## 1. Concrete Toolchain Metadata
-- **OS**: macOS (Darwin, arm64/x86_64)
-- **Node Manager**: fnm (v1.39.0) located at `/usr/local/bin/fnm`
-- **Active Runtimes**: Node.js v22.23.2, NPM 10.9.8
-- **Fixed Node Binary**: `/Users/doogie/.local/share/fnm/node-versions/v22.23.2/installation/bin/node`
-- **Fixed NPM Binary**: `/Users/doogie/.local/share/fnm/node-versions/v22.23.2/installation/bin/npm`
-- **Fixed NPX Binary**: `/Users/doogie/.local/share/fnm/node-versions/v22.23.2/installation/bin/npx`
-
-## 2. Command Execution Guidelines
-1. **Shell Command Prefixing:**
-   Always prepend the concrete installation bin directory to `PATH` before calling `npm`, `npx`, or `node`:
-   ```bash
-   export PATH="/Users/doogie/.local/share/fnm/node-versions/v22.23.2/installation/bin:$PATH" && npm <command>
-
+To use `node` or `npm` commands, you must first change the directory to your working location, apply the environment settings using the `fnm` command, and then proceed.
+"cd /Users/doogie/codes/sf_umon_ai/apps/web && eval "$(/usr/local/bin/fnm env)"
 <!-- END:environment-toolchain -->
