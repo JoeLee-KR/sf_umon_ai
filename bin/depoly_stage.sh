@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-REPO_ROOT="/svc/sf/prod/sf_umon_ai"
+REPO_ROOT="/svc/sf/stage/sf_umon_ai"
 APP_DIR="$REPO_ROOT/apps/web"
 APP_NAME="sf-web-prod"
-TARGET_PORT=3000
+TARGET_PORT=3080
 TARGET_HOST="127.0.0.1"
 
 echo "=================================================="
 echo "[Project] sf_umon_ai"
-echo "[CI/CD Pull] Production 배포 파이프라인 가동: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "[CI/CD Pull] Staging 배포 파이프라인 가동: $(date '+%Y-%m-%d %H:%M:%S')"
 
 echo "--------------------------------------------------"
 # 1. 저장소 루트 이동 및 Git 강제 동기화 (로컬 변형 무시, main 브랜치 일치)
@@ -27,7 +27,7 @@ npm ci --prefer-offline --no-audit
 
 echo "--------------------------------------------------"
 # 3. Next.js 프로덕션 정적/서버 에셋 빌드
-echo "[3/5] Next.js Production 컴파일 (npm run build)..."
+echo "[3/5] Next.js Staging 컴파일 (npm run build)..."
 npm run build
 
 echo "--------------------------------------------------"
@@ -49,5 +49,5 @@ echo "[5/5] PM2 save..."
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ Production 배포 완료: http://$TARGET_HOST:$TARGET_PORT"
+echo "✅ Staging 배포 완료: http://$TARGET_HOST:$TARGET_PORT"
 echo "=================================================="
