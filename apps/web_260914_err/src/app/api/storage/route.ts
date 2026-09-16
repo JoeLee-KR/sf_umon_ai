@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     let days: number | undefined;
     if (daysParam) {
       const parsed = parseInt(daysParam, 10);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 365) {
+      if (!isNaN(parsed) && (parsed === 30 || parsed === 90)) {
         days = parsed;
       }
     }

@@ -21,8 +21,7 @@ export function formatBytesCompact(bytes: number): string {
   const unitIndex = Math.min(i, sizes.length - 1);
   const value = bytes / Math.pow(k, unitIndex);
 
-  const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
-  return `${formatted} ${sizes[unitIndex]}`;
+  return `${value.toFixed(1)} ${sizes[unitIndex]}`;
 }
 
 export function formatDate(dateStr: string): string {

@@ -175,7 +175,7 @@ export async function fetchStorageUsage(options?: {
     const startDate = options?.startDate;
     const endDate = options?.endDate;
 
-    if (days && days > 0) {
+    if (days && (days === 30 || days === 90)) {
       // Fetch latest usage_date first or use CURDATE()
       // Current period: recent N days
       // Previous period: N days prior to current period

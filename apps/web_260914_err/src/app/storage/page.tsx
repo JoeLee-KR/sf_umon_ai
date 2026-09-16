@@ -19,22 +19,20 @@ export default function StoragePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Range options: 'days' | 'custom'
-  const [selectedRange, setSelectedRange] = useState<RangeOption>('days');
-  const [days, setDays] = useState<number>(30);
+  // Range options: '30d' | '90d' | 'custom'
+  const [selectedRange, setSelectedRange] = useState<RangeOption>('30d');
 
   // Custom date range state (default to last 30 days)
-  const [startDate, setStartDate] = useState(() => {
-    return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .substring(0, 10);
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().substring(0, 10);
-  });
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const defaultPast30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .substring(0, 10);
+
+  const [startDate, setStartDate] = useState(defaultPast30);
+  const [endDate, setEndDate] = useState(todayStr);
 
   const fetchData = useCallback(
-    async (range: RangeOption, currentDays?: number, customStart?: string, customEnd?: string) => {
+    async (range: RangeOption, customStart?: string, customEnd?: string) => {
       setLoading(true);
       setError(null);
 
@@ -42,8 +40,10 @@ export default function StoragePage() {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
         let url = `${basePath}/api/storage`;
 
-        if (range === 'days') {
-          url += `?days=${currentDays !== undefined ? currentDays : days}`;
+        if (range === '30d') {
+          url += '?days=30';
+        } else if (range === '90d') {
+          url += '?days=90';
         } else if (range === 'custom') {
           const s = customStart || startDate;
           const e = customEnd || endDate;
@@ -70,75 +70,23 @@ export default function StoragePage() {
         setLoading(false);
       }
     },
-    [days, startDate, endDate]
+    [startDate, endDate]
   );
 
   useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-        let url = `${basePath}/api/storage`;
-
-        if (selectedRange === 'days') {
-          url += `?days=${days}`;
-        } else if (selectedRange === 'custom') {
-          if (startDate && endDate) {
-            url += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-          }
-        }
-
-        const res = await fetch(url);
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          let errorMsg = errJson.message || '스토리지 사용량 데이터를 불러올 수 없습니다.';
-          if (errJson.db_host || errJson.db_name || errJson.db_user) {
-            errorMsg = `MySQL 연결 실패 (${errJson.db_host || ''}, ${errJson.db_name || ''}, ${errJson.db_user || ''}): ${errorMsg}`;
-          }
-          throw new Error(errorMsg);
-        }
-
-        const json: StorageUsageResponse = await res.json();
-        if (!ignore) {
-          setResponse(json);
-        }
-      } catch (err) {
-        if (!ignore) {
-          setError((err as Error).message);
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      ignore = true;
-    };
-  }, [selectedRange, days, startDate, endDate]);
+    fetchData(selectedRange);
+  }, [fetchData, selectedRange]);
 
   const handleRangeChange = (range: RangeOption) => {
     setSelectedRange(range);
-    if (range === 'days') {
-      fetchData('days', days);
-    }
-  };
-
-  const handleDaysChange = (newDays: number) => {
-    setDays(newDays);
-    if (selectedRange === 'days') {
-      fetchData('days', newDays);
+    if (range !== 'custom') {
+      fetchData(range);
     }
   };
 
   const handleFetchCustomRange = () => {
     if (startDate && endDate) {
-      fetchData('custom', undefined, startDate, endDate);
+      fetchData('custom', startDate, endDate);
     }
   };
 
@@ -200,17 +148,17 @@ export default function StoragePage() {
             </h2>
           </div>
           <span className="text-xs text-zinc-400">
-            {selectedRange === 'days' && `최근 ${days}일`}
+            {selectedRange === '30d' && '최근 30일 vs 이전 30일'}
+            {selectedRange === '90d' && '최근 90일 vs 이전 90일'}
             {selectedRange === 'custom' && `${startDate} ~ ${endDate}`}
           </span>
         </div>
 
         <StorageChart
           currentData={response?.currentData || []}
+          previousData={response?.previousData || []}
           selectedRange={selectedRange}
           onRangeChange={handleRangeChange}
-          days={days}
-          onDaysChange={handleDaysChange}
           startDate={startDate}
           endDate={endDate}
           onStartDateChange={setStartDate}

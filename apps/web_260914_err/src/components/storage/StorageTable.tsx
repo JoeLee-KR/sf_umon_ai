@@ -11,6 +11,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from 'lucide-react';
 
 interface StorageTableProps {
@@ -18,9 +19,9 @@ interface StorageTableProps {
   columns?: string[];
 }
 
-type SortField = 'usage_date' | 'storage_bytes' | 'stage_bytes' | 'total_bytes' | 'failsafe_bytes';
+type SortField = 'usage_date' | 'storage_bytes' | 'stage_bytes' | 'total_bytes' | 'failsafe_bytes' | 'up_dt';
 
-export default function StorageTable({ data }: StorageTableProps) {
+export default function StorageTable({ data, columns }: StorageTableProps) {
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<SortField>('usage_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -46,6 +47,7 @@ export default function StorageTable({ data }: StorageTableProps) {
       result = result.filter(
         (item) =>
           item.usage_date.toLowerCase().includes(q) ||
+          (item.up_dt && item.up_dt.toLowerCase().includes(q)) ||
           item.storage_bytes.toString().includes(q) ||
           item.stage_bytes.toString().includes(q)
       );
@@ -66,11 +68,14 @@ export default function StorageTable({ data }: StorageTableProps) {
         aVal = Number(a.stage_bytes) || 0;
         bVal = Number(b.stage_bytes) || 0;
       } else if (sortField === 'total_bytes') {
-        aVal = (Number(a.storage_bytes) || 0) + (Number(a.stage_bytes) || 0) + (Number(a.failsafe_bytes) || 0);
-        bVal = (Number(b.storage_bytes) || 0) + (Number(b.stage_bytes) || 0) + (Number(b.failsafe_bytes) || 0);
+        aVal = (Number(a.storage_bytes) || 0) + (Number(a.stage_bytes) || 0);
+        bVal = (Number(b.storage_bytes) || 0) + (Number(b.stage_bytes) || 0);
       } else if (sortField === 'failsafe_bytes') {
         aVal = Number(a.failsafe_bytes) || 0;
         bVal = Number(b.failsafe_bytes) || 0;
+      } else if (sortField === 'up_dt') {
+        aVal = a.up_dt || '';
+        bVal = b.up_dt || '';
       }
 
       if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -93,22 +98,18 @@ export default function StorageTable({ data }: StorageTableProps) {
   // Export CSV
   const handleExportCSV = () => {
     if (filteredAndSortedData.length === 0) return;
-    const headers = ['usage_date', 'storage_bytes', 'storage_formatted', 'stage_bytes', 'stage_formatted', 'failsafe_bytes', 'failsafe_formatted', 'total_bytes', 'total_formatted'];
-    const rows = filteredAndSortedData.map((d) => {
-      const failsafe = d.failsafe_bytes ?? 0;
-      const total = (Number(d.storage_bytes) || 0) + (Number(d.stage_bytes) || 0) + failsafe;
-      return [
-        d.usage_date,
-        d.storage_bytes,
-        `"${formatBytes(d.storage_bytes)}"`,
-        d.stage_bytes,
-        `"${formatBytes(d.stage_bytes)}"`,
-        failsafe,
-        `"${formatBytes(failsafe)}"`,
-        total,
-        `"${formatBytes(total)}"`,
-      ];
-    });
+    const headers = ['usage_date', 'storage_bytes', 'storage_formatted', 'stage_bytes', 'stage_formatted', 'total_bytes', 'total_formatted', 'failsafe_bytes', 'up_dt'];
+    const rows = filteredAndSortedData.map((d) => [
+      d.usage_date,
+      d.storage_bytes,
+      `"${formatBytes(d.storage_bytes)}"`,
+      d.stage_bytes,
+      `"${formatBytes(d.stage_bytes)}"`,
+      d.storage_bytes + d.stage_bytes,
+      `"${formatBytes(d.storage_bytes + d.stage_bytes)}"`,
+      d.failsafe_bytes ?? 0,
+      d.up_dt ?? '',
+    ]);
 
     const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -211,6 +212,19 @@ export default function StorageTable({ data }: StorageTableProps) {
                   </div>
                 </th>
                 <th
+                  onClick={() => handleSort('total_bytes')}
+                  className="py-3 px-4 cursor-pointer hover:bg-zinc-100/80 transition whitespace-nowrap"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>TOTAL USAGE (Storage + Stage)</span>
+                    {sortField === 'total_bytes' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-indigo-600" /> : <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 text-zinc-400" />
+                    )}
+                  </div>
+                </th>
+                <th
                   onClick={() => handleSort('failsafe_bytes')}
                   className="py-3 px-4 cursor-pointer hover:bg-zinc-100/80 transition whitespace-nowrap"
                 >
@@ -224,12 +238,12 @@ export default function StorageTable({ data }: StorageTableProps) {
                   </div>
                 </th>
                 <th
-                  onClick={() => handleSort('total_bytes')}
+                  onClick={() => handleSort('up_dt')}
                   className="py-3 px-4 cursor-pointer hover:bg-zinc-100/80 transition whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>TOTAL USAGE (누적 총합)</span>
-                    {sortField === 'total_bytes' ? (
+                    <span>UPDATED AT (UP_DT)</span>
+                    {sortField === 'up_dt' ? (
                       sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-indigo-600" /> : <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />
                     ) : (
                       <ArrowUpDown className="h-3 w-3 text-zinc-400" />
@@ -241,14 +255,13 @@ export default function StorageTable({ data }: StorageTableProps) {
             <tbody className="divide-y divide-zinc-100 font-mono text-[12px]">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-zinc-400 font-sans">
+                  <td colSpan={6} className="py-8 text-center text-zinc-400 font-sans">
                     조회된 스토리지 원천 데이터가 없습니다.
                   </td>
                 </tr>
               ) : (
                 paginatedData.map((row, idx) => {
-                  const failsafe = Number(row.failsafe_bytes) || 0;
-                  const total = (Number(row.storage_bytes) || 0) + (Number(row.stage_bytes) || 0) + failsafe;
+                  const total = (Number(row.storage_bytes) || 0) + (Number(row.stage_bytes) || 0);
                   return (
                     <tr
                       key={row.usage_date || idx}
@@ -258,24 +271,40 @@ export default function StorageTable({ data }: StorageTableProps) {
                         {row.usage_date}
                       </td>
                       <td className="py-2.5 px-4 text-zinc-800">
-                        <span className="font-bold text-indigo-700">
-                          {formatBytes(row.storage_bytes)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-indigo-700">
+                            {formatBytes(row.storage_bytes)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            ({row.storage_bytes.toLocaleString()})
+                          </span>
+                        </div>
                       </td>
                       <td className="py-2.5 px-4 text-zinc-800">
-                        <span className="font-bold text-emerald-700">
-                          {formatBytes(row.stage_bytes)}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-zinc-800">
-                        <span className="font-bold text-amber-600">
-                          {row.failsafe_bytes !== undefined ? formatBytes(row.failsafe_bytes) : '-'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-emerald-700">
+                            {formatBytes(row.stage_bytes)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            ({row.stage_bytes.toLocaleString()})
+                          </span>
+                        </div>
                       </td>
                       <td className="py-2.5 px-4 text-zinc-900">
-                        <span className="font-bold text-purple-700">
-                          {formatBytes(total)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-purple-700">
+                            {formatBytes(total)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            ({total.toLocaleString()})
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 text-zinc-600">
+                        {row.failsafe_bytes !== undefined ? formatBytes(row.failsafe_bytes) : '-'}
+                      </td>
+                      <td className="py-2.5 px-4 text-zinc-500 text-[11px] font-sans">
+                        {row.up_dt || '-'}
                       </td>
                     </tr>
                   );
