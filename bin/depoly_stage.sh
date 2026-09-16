@@ -3,7 +3,7 @@ set -eo pipefail
 
 REPO_ROOT="/svc/sf/stage/sf_umon_ai"
 APP_DIR="$REPO_ROOT/apps/web"
-APP_NAME="sf-web-prod"
+APP_NAME="sf-web-stage"
 TARGET_PORT=3080
 TARGET_HOST="127.0.0.1"
 
