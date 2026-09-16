@@ -186,10 +186,6 @@ export async function fetchStorageUsage(options?: {
           storage_bytes,
           stage_bytes,
           failsafe_bytes,
-          hybrid_table_storage_bytes,
-          archive_storage_cool_bytes,
-          archive_storage_cold_bytes,
-          archive_storage_retrieval_temp_bytes,
           DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
         FROM sf_storage_usage
         WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
@@ -204,10 +200,6 @@ export async function fetchStorageUsage(options?: {
           storage_bytes,
           stage_bytes,
           failsafe_bytes,
-          hybrid_table_storage_bytes,
-          archive_storage_cool_bytes,
-          archive_storage_cold_bytes,
-          archive_storage_retrieval_temp_bytes,
           DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
         FROM sf_storage_usage
         WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
@@ -223,10 +215,6 @@ export async function fetchStorageUsage(options?: {
           storage_bytes,
           stage_bytes,
           failsafe_bytes,
-          hybrid_table_storage_bytes,
-          archive_storage_cool_bytes,
-          archive_storage_cold_bytes,
-          archive_storage_retrieval_temp_bytes,
           DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
         FROM sf_storage_usage
         WHERE usage_date >= ? AND usage_date <= ?
@@ -242,10 +230,6 @@ export async function fetchStorageUsage(options?: {
           storage_bytes,
           stage_bytes,
           failsafe_bytes,
-          hybrid_table_storage_bytes,
-          archive_storage_cool_bytes,
-          archive_storage_cold_bytes,
-          archive_storage_retrieval_temp_bytes,
           DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
         FROM sf_storage_usage
         WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
@@ -260,10 +244,6 @@ export async function fetchStorageUsage(options?: {
           storage_bytes,
           stage_bytes,
           failsafe_bytes,
-          hybrid_table_storage_bytes,
-          archive_storage_cool_bytes,
-          archive_storage_cold_bytes,
-          archive_storage_retrieval_temp_bytes,
           DATE_FORMAT(up_dt, '%Y-%m-%d %H:%i:%s') as up_dt
         FROM sf_storage_usage
         WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL 59 DAY)
@@ -294,10 +274,6 @@ export async function fetchStorageUsage(options?: {
       };
       if (r.pkid !== undefined && r.pkid !== null) item.pkid = Number(r.pkid);
       if (r.failsafe_bytes !== undefined && r.failsafe_bytes !== null) item.failsafe_bytes = Number(r.failsafe_bytes);
-      if (r.hybrid_table_storage_bytes !== undefined && r.hybrid_table_storage_bytes !== null) item.hybrid_table_storage_bytes = Number(r.hybrid_table_storage_bytes);
-      if (r.archive_storage_cool_bytes !== undefined && r.archive_storage_cool_bytes !== null) item.archive_storage_cool_bytes = Number(r.archive_storage_cool_bytes);
-      if (r.archive_storage_cold_bytes !== undefined && r.archive_storage_cold_bytes !== null) item.archive_storage_cold_bytes = Number(r.archive_storage_cold_bytes);
-      if (r.archive_storage_retrieval_temp_bytes !== undefined && r.archive_storage_retrieval_temp_bytes !== null) item.archive_storage_retrieval_temp_bytes = Number(r.archive_storage_retrieval_temp_bytes);
       if (r.up_dt) item.up_dt = String(r.up_dt);
       return item;
     };
@@ -307,7 +283,7 @@ export async function fetchStorageUsage(options?: {
 
     // Get column names from query fields
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const columns = Array.isArray(fields) ? fields.map((f: any) => f.name) : ['usage_date', 'storage_bytes', 'stage_bytes'];
+    const columns = Array.isArray(fields) ? fields.map((f: any) => f.name) : ['pkid', 'usage_date', 'storage_bytes', 'stage_bytes', 'failsafe_bytes', 'up_dt'];
 
     return {
       currentData,

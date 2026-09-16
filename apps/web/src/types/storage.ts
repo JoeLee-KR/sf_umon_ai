@@ -4,10 +4,6 @@ export interface StorageUsage {
   storage_bytes: number;
   stage_bytes: number;
   failsafe_bytes?: number;
-  hybrid_table_storage_bytes?: number;
-  archive_storage_cool_bytes?: number;
-  archive_storage_cold_bytes?: number;
-  archive_storage_retrieval_temp_bytes?: number;
   up_dt?: string;
   [key: string]: unknown;
 }
