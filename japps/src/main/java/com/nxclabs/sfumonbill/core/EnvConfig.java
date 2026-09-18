@@ -3,11 +3,12 @@ package com.nxclabs.sfumonbill.core;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * jar 옆(또는 지정 디렉터리)의 .env.[name] 파일을 읽어 KEY=VALUE 로 로드한다.
+ * jar 옆(또는 --env-dir 로 지정된 디렉터리)의 .env.[name] 파일을 읽어 KEY=VALUE 로 로드한다.
  * apps/web 의 .env.local 방식과 동일한 컨벤션: 실 자격증명 파일은 git에 커밋하지 않고,
  * .env.default 만 예시 템플릿으로 커밋한다.
  *
@@ -23,14 +24,14 @@ public final class EnvConfig {
     }
 
     /**
-     * @param envDir --env-dir 로 지정된 디렉터리, 없으면 현재 작업 디렉터리(jar 실행 위치)를 사용
+     * @param envDir --env-dir 로 지정된 디렉터리. null 이면 실행 중인 Main.jar 파일이 위치한 디렉터리를 사용한다.
      * @param name   --env 로 지정된 이름 (예: "default", "prod", "stage"). null 이면 "default"
      */
     public static EnvConfig load(Path envDir, String name) throws IOException {
         String resolvedName = (name == null || name.isBlank()) ? "default" : name;
         EnvConfig config = new EnvConfig(resolvedName);
 
-        Path dir = (envDir != null) ? envDir : Path.of(".");
+        Path dir = (envDir != null) ? envDir : jarDir();
         Path file = dir.resolve(".env." + resolvedName);
 
         if (!Files.exists(file)) {
@@ -58,6 +59,22 @@ public final class EnvConfig {
         }
 
         return config;
+    }
+
+    /**
+     * 실행 중인 코드가 로드된 위치의 디렉터리를 반환한다.
+     * java -jar Main.jar 로 실행한 경우: Main.jar 파일이 있는 디렉터리.
+     * java -cp target/classes ... 로 실행한 경우(개발 중 클래스 직접 실행): target/classes 디렉터리.
+     * 위치를 알 수 없으면 현재 작업 디렉터리로 폴백한다.
+     */
+    private static Path jarDir() {
+        try {
+            CodeSource codeSource = EnvConfig.class.getProtectionDomain().getCodeSource();
+            Path location = Path.of(codeSource.getLocation().toURI());
+            return Files.isRegularFile(location) ? location.getParent() : location;
+        } catch (Exception e) {
+            return Path.of(".");
+        }
     }
 
     public String name() {

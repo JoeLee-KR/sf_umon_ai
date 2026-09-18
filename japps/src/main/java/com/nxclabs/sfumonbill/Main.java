@@ -79,7 +79,7 @@ public final class Main {
         System.out.println();
         System.out.println("옵션:");
         System.out.println("  --env=NAME       .env.NAME 파일을 로드 (기본값: default)");
-        System.out.println("  --env-dir=DIR    .env.NAME 파일을 찾을 디렉터리 (기본값: 현재 작업 디렉터리)");
+        System.out.println("  --env-dir=DIR    .env.NAME 파일을 찾을 디렉터리 (기본값: Main.jar 파일이 있는 디렉터리)");
         System.out.println();
         System.out.println("사용 가능한 커맨드:");
 
