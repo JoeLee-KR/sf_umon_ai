@@ -146,7 +146,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Java (japps, Maven)
+# Java (backutil, Maven)
 target/
 *.class
 hs_err_pid*

@@ -4,7 +4,6 @@ import com.nxclabs.sfumonbill.core.Command;
 import com.nxclabs.sfumonbill.core.CommandRegistry;
 import com.nxclabs.sfumonbill.core.EnvConfig;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +15,12 @@ import java.util.TreeMap;
  * 사용법:
  *   java -jar Main.jar                                  안내 출력
  *   java -jar Main.jar help                              안내 출력
- *   java -jar Main.jar &lt;group&gt; &lt;name&gt; [--env=default] [--env-dir=DIR] [args...]
+ *   java -jar Main.jar &lt;group&gt; &lt;name&gt; [--env=.env.default] [args...]
  *
  * 예:
- *   java -jar Main.jar check mysql-sfbill --env=default
- *   java -jar Main.jar cmd fetchup-snowflake-bill --env=prod
+ *   java -jar Main.jar check mysql-sfbill --env=.env.default
+ *   java -jar Main.jar cmd fetchup-snowflake-bill --env=.env.prod
+ *   java -jar Main.jar cmd fetchup-snowflake-bill --env=config/.env.test   (config/.env.test 를 사용)
  */
 public final class Main {
 
@@ -40,15 +40,12 @@ public final class Main {
         String name = args[1];
 
         String envName = null;
-        Path envDir = null;
         List<String> remaining = new ArrayList<>();
 
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("--env=")) {
                 envName = arg.substring("--env=".length());
-            } else if (arg.startsWith("--env-dir=")) {
-                envDir = Path.of(arg.substring("--env-dir=".length()));
             } else {
                 remaining.add(arg);
             }
@@ -63,7 +60,7 @@ public final class Main {
         }
 
         try {
-            EnvConfig env = EnvConfig.load(envDir, envName);
+            EnvConfig env = EnvConfig.load(envName);
             command.run(remaining.toArray(new String[0]), env);
         } catch (Exception e) {
             System.err.println("[실패] " + group + " " + name + " : " + e.getMessage());
@@ -72,14 +69,16 @@ public final class Main {
     }
 
     private static void printUsage() {
-        System.out.println("sf_umon_ai / japps - Main.jar");
+        System.out.println("sf_umon_ai / backutil - Main.jar");
         System.out.println();
         System.out.println("사용법:");
-        System.out.println("  java -jar Main.jar <group> <name> [--env=default] [--env-dir=DIR] [args...]");
+        System.out.println("  java -jar Main.jar <group> <name> [--env=.env.default] [args...]");
         System.out.println();
         System.out.println("옵션:");
-        System.out.println("  --env=NAME       .env.NAME 파일을 로드 (기본값: default)");
-        System.out.println("  --env-dir=DIR    .env.NAME 파일을 찾을 디렉터리 (기본값: Main.jar 파일이 있는 디렉터리)");
+        System.out.println("  --env=FILE       FILE 을 .env 파일로 로드 (기본값: .env.default)");
+        System.out.println("                   파일명 전체를 적는다 (예: --env=.env.myconf)");
+        System.out.println("                   디렉터리를 포함시킬 수 있다 (예: --env=config/.env.test)");
+        System.out.println("                   디렉터리 없이 파일명만 주면 Main.jar 파일이 있는 디렉터리에서 찾는다");
         System.out.println();
         System.out.println("사용 가능한 커맨드:");
 
