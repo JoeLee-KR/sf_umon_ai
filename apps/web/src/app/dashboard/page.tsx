@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Calendar,
   HardDrive,
   Cpu,
   RefreshCw,
@@ -11,11 +10,6 @@ import {
   TrendingUp,
   Sparkles,
   Server,
-  Layers,
-  Shield,
-  Zap,
-  Activity,
-  ArrowUpRight,
 } from 'lucide-react';
 import StorageChart from '@/components/storage/StorageChart';
 import ComputeChart from '@/components/compute/ComputeChart';
@@ -23,25 +17,57 @@ import { StorageUsageResponse, StorageUsage } from '@/types/storage';
 import { ComputeUsageResponse, ComputeDailyUsage } from '@/types/compute';
 import { formatBytes, formatCredits } from '@/lib/formatters';
 
-type DateRangeOption = 7 | 30;
+const CHART_DAYS = 30;
+
+// ─── 알고리즘 헬퍼 ───────────────────────────────────────────────────────────
+
+/** 단순 선형회귀 y = ax + b */
+function linearReg(xs: number[], ys: number[]): { a: number; b: number } {
+  const n = xs.length;
+  if (n < 2) return { a: 0, b: ys[0] ?? 0 };
+  const sx = xs.reduce((s, x) => s + x, 0);
+  const sy = ys.reduce((s, y) => s + y, 0);
+  const sxy = xs.reduce((s, x, i) => s + x * ys[i], 0);
+  const sxx = xs.reduce((s, x) => s + x * x, 0);
+  const d = n * sxx - sx * sx;
+  if (d === 0) return { a: 0, b: sy / n };
+  const a = (n * sxy - sx * sy) / d;
+  return { a, b: (sy - a * sx) / n };
+}
+
+/** 해당 년월의 총 일수 */
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate(); // month는 1-based
+}
+
+// ─── 예측값 타입 ─────────────────────────────────────────────────────────────
+
+interface ForecastResult {
+  ratio: number;    // 전월비율기반
+  linear: number;   // 선형회귀
+  wma: number;      // 가중이동평균
+  elapsed: number;
+  total: number;
+  remaining: number;
+}
+
+// ─── 컴포넌트 ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  // 조회 기간 상태: 7일(기본), 30일
-  const [rangeDays, setRangeDays] = useState<DateRangeOption>(7);
-
-  // 데이터 로딩 및 에러 상태
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 선택 기간 데이터
   const [storageData, setStorageData] = useState<StorageUsageResponse | null>(null);
   const [computeData, setComputeData] = useState<ComputeUsageResponse | null>(null);
 
-  // 이번 달 누적/예상량 계산용 데이터
+  // 이번달 데이터
   const [monthStorageData, setMonthStorageData] = useState<StorageUsage[]>([]);
   const [monthComputeDaily, setMonthComputeDaily] = useState<ComputeDailyUsage[]>([]);
 
-  // 현재 기준 년/월 정보
+  // 전월 데이터 (알고리즘1 전월비율 계산용)
+  const [prevStorageData, setPrevStorageData] = useState<StorageUsage[]>([]);
+  const [prevComputeDaily, setPrevComputeDaily] = useState<ComputeDailyUsage[]>([]);
+
   const currentDateInfo = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -51,20 +77,32 @@ export default function DashboardPage() {
     return { year, month, monthStr, formatted };
   }, []);
 
-  // 데이터 조회 함수
-  const fetchDashboardData = useCallback(async (selectedDays: DateRangeOption) => {
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
     try {
-      // 1. 선택된 기간(7일 or 30일)의 스토리지 & 컴퓨트 데이터 조회
-      const [storageRes, computeRes, monthStorageRes, monthComputeRes] = await Promise.all([
-        fetch(`${basePath}/api/storage?days=${selectedDays}`),
-        fetch(`${basePath}/api/compute?days=${selectedDays}`),
-        fetch(`${basePath}/api/storage?days=31`), // 이번달 데이터 커버용
-        fetch(`${basePath}/api/compute?days=31`), // 이번달 데이터 커버용
+      // 전월 startDate / endDate 계산
+      const now = new Date();
+      const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // 0-based → 1-based
+      const prevLastDay = getDaysInMonth(prevYear, prevMonth);
+      const prevStart = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
+      const prevEnd = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevLastDay).padStart(2, '0')}`;
+
+      const [
+        storageRes, computeRes,
+        monthStorageRes, monthComputeRes,
+        prevStorageRes, prevComputeRes,
+      ] = await Promise.all([
+        fetch(`${basePath}/api/storage?days=${CHART_DAYS}`),
+        fetch(`${basePath}/api/compute?days=${CHART_DAYS}`),
+        fetch(`${basePath}/api/storage?days=31`),
+        fetch(`${basePath}/api/compute?days=31`),
+        fetch(`${basePath}/api/storage?startDate=${prevStart}&endDate=${prevEnd}`),
+        fetch(`${basePath}/api/compute?startDate=${prevStart}&endDate=${prevEnd}`),
       ]);
 
       if (!storageRes.ok || !computeRes.ok) {
@@ -76,14 +114,21 @@ export default function DashboardPage() {
       setStorageData(storageJson);
       setComputeData(computeJson);
 
-      // 이번달 데이터 가공
       if (monthStorageRes.ok) {
-        const mStorageJson: StorageUsageResponse = await monthStorageRes.json();
-        setMonthStorageData(mStorageJson.currentData || []);
+        const j: StorageUsageResponse = await monthStorageRes.json();
+        setMonthStorageData(j.currentData || []);
       }
       if (monthComputeRes.ok) {
-        const mComputeJson: ComputeUsageResponse = await monthComputeRes.json();
-        setMonthComputeDaily(mComputeJson.dailyData || []);
+        const j: ComputeUsageResponse = await monthComputeRes.json();
+        setMonthComputeDaily(j.dailyData || []);
+      }
+      if (prevStorageRes.ok) {
+        const j: StorageUsageResponse = await prevStorageRes.json();
+        setPrevStorageData(j.currentData || []);
+      }
+      if (prevComputeRes.ok) {
+        const j: ComputeUsageResponse = await prevComputeRes.json();
+        setPrevComputeDaily(j.dailyData || []);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -93,69 +138,37 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData(rangeDays);
-  }, [rangeDays, fetchDashboardData]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-  // 이번달 스토리지 사용량 통계 계산
+  // ── 이번달 스토리지 현황 ──────────────────────────────────────────────────
   const monthlyStorageStats = useMemo(() => {
     const prefix = currentDateInfo.monthStr;
-    // 이번달 데이터 우선 필터링, 없으면 전체 최신 데이터 사용
-    const currentMonthItems = monthStorageData.filter((item) =>
-      item.usage_date?.startsWith(prefix)
-    );
-    const sourceData = currentMonthItems.length > 0 ? currentMonthItems : monthStorageData;
-
-    if (sourceData.length === 0) {
-      return {
-        latestDate: '',
-        storageBytes: 0,
-        stageBytes: 0,
-        failsafeBytes: 0,
-        totalBytes: 0,
-      };
-    }
-
-    // 최신 항목
-    const latest = sourceData[0]; // DESC 정렬이 기본
+    const cur = monthStorageData.filter(i => i.usage_date?.startsWith(prefix));
+    const src = cur.length > 0 ? cur : monthStorageData;
+    if (src.length === 0) return { latestDate: '', storageBytes: 0, stageBytes: 0, failsafeBytes: 0, totalBytes: 0 };
+    const latest = src[0];
     const s = Number(latest.storage_bytes) || 0;
     const st = Number(latest.stage_bytes) || 0;
     const f = Number(latest.failsafe_bytes) || 0;
-    return {
-      latestDate: latest.usage_date || '',
-      storageBytes: s,
-      stageBytes: st,
-      failsafeBytes: f,
-      totalBytes: s + st + f,
-    };
+    return { latestDate: latest.usage_date || '', storageBytes: s, stageBytes: st, failsafeBytes: f, totalBytes: s + st + f };
   }, [monthStorageData, currentDateInfo.monthStr]);
 
-  // 이번달 컴퓨트 누적 사용량 계산
+  // ── 이번달 컴퓨트 현황 ──────────────────────────────────────────────────
   const monthlyComputeStats = useMemo(() => {
     const prefix = currentDateInfo.monthStr;
-    const currentMonthItems = monthComputeDaily.filter((item) =>
-      item.usage_date?.startsWith(prefix)
-    );
-    const sourceData = currentMonthItems.length > 0 ? currentMonthItems : monthComputeDaily;
-
-    let totalCredits = 0;
-    let comSfTotal = 0;
-    let comAiTotal = 0;
-    let aiTokenTotal = 0;
-    let latestDate = '';
-
-    for (const item of sourceData) {
+    const cur = monthComputeDaily.filter(i => i.usage_date?.startsWith(prefix));
+    const src = cur.length > 0 ? cur : monthComputeDaily;
+    let totalCredits = 0, comSfTotal = 0, comAiTotal = 0, aiTokenTotal = 0, latestDate = '';
+    for (const item of src) {
       totalCredits += item.total_credits || 0;
       comSfTotal += item.com_sf || 0;
       comAiTotal += item.com_ai || 0;
       aiTokenTotal += item.ai_token || 0;
-      if (!latestDate || item.usage_date > latestDate) {
-        latestDate = item.usage_date;
-      }
+      if (!latestDate || item.usage_date > latestDate) latestDate = item.usage_date;
     }
-
     return {
-      recordCount: sourceData.length,
-      latestDate,
+      recordCount: src.length, latestDate,
       totalCredits: Number(totalCredits.toFixed(4)),
       comSfTotal: Number(comSfTotal.toFixed(4)),
       comAiTotal: Number(comAiTotal.toFixed(4)),
@@ -163,9 +176,151 @@ export default function DashboardPage() {
     };
   }, [monthComputeDaily, currentDateInfo.monthStr]);
 
+  // ── 📊 스토리지 월말 예측 (3가지 알고리즘) ──────────────────────────────
+  const storageForecast = useMemo((): ForecastResult | null => {
+    const { year, month, monthStr } = currentDateInfo;
+    const D = getDaysInMonth(year, month);
+
+    // 이번달 스토리지 날짜 오름차순 정렬
+    const items = monthStorageData
+      .filter(i => i.usage_date?.startsWith(monthStr))
+      .sort((a, b) => (a.usage_date || '').localeCompare(b.usage_date || ''));
+
+    if (items.length === 0) return null;
+
+    const toTotal = (i: StorageUsage) =>
+      (Number(i.storage_bytes) || 0) + (Number(i.stage_bytes) || 0) + (Number(i.failsafe_bytes) || 0);
+
+    const totals = items.map(toTotal);
+    const dayNums = items.map(i => parseInt(i.usage_date?.substring(8, 10) || '0', 10));
+    const n = items.length;
+    const latestDay = dayNums[n - 1];
+    const currentStorage = totals[n - 1];
+    const remaining = D - latestDay;
+
+    // ① 전월비율기반: (현재 storage / 전월 같은 날 storage) × 전월 말 storage
+    let ratio = currentStorage; // fallback = 현재값 유지
+    const prevSorted = [...prevStorageData].sort((a, b) => (a.usage_date || '').localeCompare(b.usage_date || ''));
+    if (prevSorted.length > 0) {
+      const prevEnd = prevSorted[prevSorted.length - 1];
+      const prevEndTotal = toTotal(prevEnd);
+      const sameDayItem = prevSorted.find(i => parseInt(i.usage_date?.substring(8, 10) || '0', 10) === latestDay)
+        ?? prevSorted[Math.min(latestDay - 1, prevSorted.length - 1)];
+      const sameDayTotal = sameDayItem ? toTotal(sameDayItem) : 0;
+      if (sameDayTotal > 0 && prevEndTotal > 0) {
+        ratio = prevEndTotal * (currentStorage / sameDayTotal);
+      } else if (n >= 2) {
+        // fallback: 추세 연장
+        const slope = (totals[n - 1] - totals[0]) / Math.max(1, dayNums[n - 1] - dayNums[0]);
+        ratio = currentStorage + slope * remaining;
+      }
+    } else if (n >= 2) {
+      const slope = (totals[n - 1] - totals[0]) / Math.max(1, dayNums[n - 1] - dayNums[0]);
+      ratio = currentStorage + slope * remaining;
+    }
+
+    // ② 선형회귀: y = a*day + b 에서 day=D 예측
+    const { a: la, b: lb } = linearReg(dayNums, totals);
+    const linear = la * D + lb;
+
+    // ③ 가중이동평균 일변화량: 최근 데이터 높은 가중치
+    let wma = currentStorage;
+    if (n >= 2) {
+      const changes = totals.slice(1).map((v, i) => v - totals[i]);
+      const ws = changes.map((_, i) => i + 1);
+      const wsSum = ws.reduce((s, w) => s + w, 0);
+      const weightedChange = changes.reduce((s, c, i) => s + c * ws[i], 0) / wsSum;
+      wma = currentStorage + weightedChange * remaining;
+    }
+
+    return { ratio: Math.max(0, ratio), linear: Math.max(0, linear), wma: Math.max(0, wma), elapsed: n, total: D, remaining };
+  }, [monthStorageData, prevStorageData, currentDateInfo]);
+
+  // ── 📊 컴퓨트 월말 예측 (3가지 알고리즘) ────────────────────────────────
+  const computeForecast = useMemo((): ForecastResult | null => {
+    const { year, month, monthStr } = currentDateInfo;
+    const D = getDaysInMonth(year, month);
+
+    const items = monthComputeDaily
+      .filter(i => i.usage_date?.startsWith(monthStr))
+      .sort((a, b) => (a.usage_date || '').localeCompare(b.usage_date || ''));
+
+    if (items.length === 0) return null;
+
+    const dailyC = items.map(i => i.total_credits || 0);
+    const n = dailyC.length;
+    const currentTotal = dailyC.reduce((s, c) => s + c, 0);
+    const remaining = D - n;
+
+    // ① 전월비율기반: 전월 같은 기간 누적 대비 전월 전체 스케일링
+    let ratio: number;
+    const prevSorted = [...prevComputeDaily].sort((a, b) => (a.usage_date || '').localeCompare(b.usage_date || ''));
+    if (prevSorted.length > 0) {
+      const prevTotal = prevSorted.reduce((s, i) => s + (i.total_credits || 0), 0);
+      const prevSamePeriod = prevSorted.slice(0, n).reduce((s, i) => s + (i.total_credits || 0), 0);
+      ratio = prevSamePeriod > 0 ? prevTotal * (currentTotal / prevSamePeriod) : (currentTotal / n) * D;
+    } else {
+      ratio = n > 0 ? (currentTotal / n) * D : 0;
+    }
+
+    // ② 선형회귀: 일별 크레딧 추세를 반영한 잔여일 누적
+    const xs = dailyC.map((_, i) => i + 1);
+    const { a: la, b: lb } = linearReg(xs, dailyC);
+    let linear = currentTotal;
+    for (let x = n + 1; x <= D; x++) {
+      linear += Math.max(0, la * x + lb);
+    }
+
+    // ③ 가중이동평균: 최근 일별 사용량에 높은 가중치 → 잔여일 추정
+    const ws = dailyC.map((_, i) => i + 1);
+    const wsSum = ws.reduce((s, w) => s + w, 0);
+    const weightedAvg = dailyC.reduce((s, c, i) => s + c * ws[i], 0) / wsSum;
+    const wma = currentTotal + weightedAvg * remaining;
+
+    return { ratio: Math.max(0, ratio), linear: Math.max(0, linear), wma: Math.max(0, wma), elapsed: n, total: D, remaining };
+  }, [monthComputeDaily, prevComputeDaily, currentDateInfo]);
+
+  // ─── 렌더 ────────────────────────────────────────────────────────────────
+
+  /** 3가지 예측값 표시 서브 컴포넌트 */
+  const ForecastRows = ({
+    forecast,
+    formatter,
+    unit,
+  }: {
+    forecast: ForecastResult | null;
+    formatter: (v: number) => string;
+    unit?: string;
+  }) => {
+    if (!forecast) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 font-mono">
+          데이터 부족
+        </span>
+      );
+    }
+    const rows = [
+      { label: '전월비율', value: forecast.ratio, color: 'text-indigo-700' },
+      { label: '선형회귀', value: forecast.linear, color: 'text-emerald-700' },
+      { label: '가중평균', value: forecast.wma, color: 'text-purple-700' },
+    ];
+    return (
+      <div className="space-y-1.5">
+        {rows.map(({ label, value, color }) => (
+          <div key={label} className="flex items-center justify-between gap-1">
+            <span className="text-[10px] text-zinc-500 shrink-0 w-14">{label}</span>
+            <span className={`text-[11px] font-bold font-mono ${color} text-right`}>
+              {formatter(value)}{unit ? ` ${unit}` : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* 0. 대시보드 타이틀 & 새로고침 버튼 */}
+      {/* 0. 타이틀 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -183,14 +338,12 @@ export default function DashboardPage() {
           {storageData && (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
               <Server className="h-3.5 w-3.5" />
-              <span>
-                {storageData.db_host}:{storageData.db_name}
-              </span>
+              <span>{storageData.db_host}:{storageData.db_name}</span>
             </div>
           )}
           <button
             type="button"
-            onClick={() => fetchDashboardData(rangeDays)}
+            onClick={() => fetchDashboardData()}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-700 text-xs font-medium rounded-md hover:bg-zinc-50 shadow-2xs transition disabled:opacity-50"
           >
@@ -200,7 +353,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 에러 알림 */}
+      {/* 에러 */}
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg flex items-start gap-3 text-xs">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-500" />
@@ -211,9 +364,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 1. 첫 번째 블럭: 이번달 예상량 (년도와 월 표시, 월말 기준 스토리지/컴퓨트 사용량 및 예측량) */}
-      {/* ========================================================================= */}
+      {/* ===================================================================== */}
+      {/* 1. 이번달 예상량 블록 */}
+      {/* ===================================================================== */}
       <section className="bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2.5">
@@ -228,17 +381,22 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                월말 기준 현재까지의 누적 사용량 및 월말 예측량
+                월말 기준 현재까지의 누적 사용량 및 알고리즘 3종 월말 예측량
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono text-zinc-400">
-            기준월: {currentDateInfo.monthStr}
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+              <span className="inline-block w-2 h-2 rounded-full bg-indigo-500" />전월비율
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 ml-1" />선형회귀
+              <span className="inline-block w-2 h-2 rounded-full bg-purple-500 ml-1" />가중평균
+            </div>
+            <span className="text-xs font-mono text-zinc-400">기준월: {currentDateInfo.monthStr}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 1-1. 스토리지 사용량 및 예측량 카드 */}
+          {/* ── 스토리지 카드 ── */}
           <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 hover:bg-white hover:border-zinc-300 transition shadow-2xs space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-zinc-800">
@@ -258,56 +416,52 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
-              {/* 현재까지 스토리지 사용량 */}
+              {/* 현재까지 */}
               <div className="bg-white border border-zinc-200 rounded-lg p-3">
-                <span className="text-xs font-medium text-zinc-500 block mb-1">
-                  현재까지 사용량
-                </span>
+                <span className="text-xs font-medium text-zinc-500 block mb-1">현재까지 사용량</span>
                 <div className="text-xl font-extrabold text-zinc-900 font-mono tracking-tight">
                   {formatBytes(monthlyStorageStats.totalBytes)}
                 </div>
                 <div className="mt-2 pt-2 border-t border-zinc-100 text-[11px] text-zinc-500 space-y-0.5">
                   <div className="flex justify-between">
                     <span>Storage:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatBytes(monthlyStorageStats.storageBytes)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatBytes(monthlyStorageStats.storageBytes)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Stage:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatBytes(monthlyStorageStats.stageBytes)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatBytes(monthlyStorageStats.stageBytes)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Failsafe:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatBytes(monthlyStorageStats.failsafeBytes)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatBytes(monthlyStorageStats.failsafeBytes)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* 월말 스토리지 예측량 */}
+              {/* 월말 예측 */}
               <div className="bg-white border border-zinc-200 rounded-lg p-3 flex flex-col justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 block mb-1">
-                    월말 예측량
-                  </span>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 font-mono">
-                      NotYet
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-zinc-500">월말 예측량</span>
+                    {storageForecast && (
+                      <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-0.5">
+                        <TrendingUp className="h-3 w-3" />
+                        {storageForecast.elapsed}/{storageForecast.total}일
+                      </span>
+                    )}
                   </div>
+                  <ForecastRows forecast={storageForecast} formatter={(v) => formatBytes(v)} />
                 </div>
-                <p className="text-[11px] text-zinc-400 mt-2 pt-2 border-t border-zinc-100">
-                  예측 알고리즘 산정 후 추가 예정
+                <p className="text-[10px] text-zinc-400 mt-2 pt-2 border-t border-zinc-100">
+                  {storageForecast
+                    ? `잔여 ${storageForecast.remaining}일 기준 3종 알고리즘 추정`
+                    : '이번달 스토리지 데이터 필요'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 1-2. Compute 사용량 및 예측량 카드 */}
+          {/* ── 컴퓨트 카드 ── */}
           <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 hover:bg-white hover:border-zinc-300 transition shadow-2xs space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-zinc-800">
@@ -327,11 +481,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
-              {/* 이번달 누적 Compute 사용량 */}
+              {/* 현재까지 */}
               <div className="bg-white border border-zinc-200 rounded-lg p-3">
-                <span className="text-xs font-medium text-zinc-500 block mb-1">
-                  이번달 누적 사용량
-                </span>
+                <span className="text-xs font-medium text-zinc-500 block mb-1">이번달 누적 사용량</span>
                 <div className="text-xl font-extrabold text-zinc-900 font-mono tracking-tight">
                   {formatCredits(monthlyComputeStats.totalCredits, 2)}
                   <span className="text-xs font-normal text-zinc-500 ml-1">Credits</span>
@@ -339,39 +491,41 @@ export default function DashboardPage() {
                 <div className="mt-2 pt-2 border-t border-zinc-100 text-[11px] text-zinc-500 space-y-0.5">
                   <div className="flex justify-between">
                     <span>COM_SF:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatCredits(monthlyComputeStats.comSfTotal, 1)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatCredits(monthlyComputeStats.comSfTotal, 1)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>COM_AI:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatCredits(monthlyComputeStats.comAiTotal, 1)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatCredits(monthlyComputeStats.comAiTotal, 1)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>AI_TOKEN:</span>
-                    <span className="font-mono font-medium text-zinc-700">
-                      {formatCredits(monthlyComputeStats.aiTokenTotal, 1)}
-                    </span>
+                    <span className="font-mono font-medium text-zinc-700">{formatCredits(monthlyComputeStats.aiTokenTotal, 1)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* 월말 Compute 예측량 */}
+              {/* 월말 예측 */}
               <div className="bg-white border border-zinc-200 rounded-lg p-3 flex flex-col justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 block mb-1">
-                    월말 예측량
-                  </span>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 font-mono">
-                      NotYet
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-zinc-500">월말 예측량</span>
+                    {computeForecast && (
+                      <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-0.5">
+                        <TrendingUp className="h-3 w-3" />
+                        {computeForecast.elapsed}/{computeForecast.total}일
+                      </span>
+                    )}
                   </div>
+                  <ForecastRows
+                    forecast={computeForecast}
+                    formatter={(v) => formatCredits(v, 1)}
+                    unit="Cr"
+                  />
                 </div>
-                <p className="text-[11px] text-zinc-400 mt-2 pt-2 border-t border-zinc-100">
-                  예측 알고리즘 산정 후 추가 예정
+                <p className="text-[10px] text-zinc-400 mt-2 pt-2 border-t border-zinc-100">
+                  {computeForecast
+                    ? `잔여 ${computeForecast.remaining}일 기준 3종 알고리즘 추정`
+                    : '이번달 컴퓨트 데이터 필요'}
                 </p>
               </div>
             </div>
@@ -379,47 +533,9 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 2. 두 번째 블럭: 조회 기간 선택 (7일 기본, 30일 2가지 옵션) */}
-      {/* ========================================================================= */}
-      <div className="bg-white border border-zinc-200 rounded-xl p-3.5 flex items-center justify-between shadow-2xs">
-        <div className="flex items-center gap-2 text-zinc-700">
-          <Calendar className="h-4 w-4 text-indigo-600 shrink-0" />
-          <span className="text-sm font-bold tracking-tight">조회 기간 선택</span>
-          <span className="text-xs text-zinc-400 hidden sm:inline">
-            (하단 스토리지 및 컴퓨트 요약 차트에 적용됩니다)
-          </span>
-        </div>
-
-        <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
-          <button
-            type="button"
-            onClick={() => setRangeDays(7)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              rangeDays === 7
-                ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/80 font-bold text-indigo-700'
-                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
-            }`}
-          >
-            7일 (기본)
-          </button>
-          <button
-            type="button"
-            onClick={() => setRangeDays(30)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              rangeDays === 30
-                ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/80 font-bold text-indigo-700'
-                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
-            }`}
-          >
-            30일
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 3. 세 번째 블럭: 스토리지 요약 (최근 스토리지 사용량 + 그래프) */}
-      {/* ========================================================================= */}
+      {/* ===================================================================== */}
+      {/* 2. 스토리지 요약 */}
+      {/* ===================================================================== */}
       <section className="bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2">
@@ -429,27 +545,26 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-sm font-bold text-zinc-800">스토리지 요약 (Storage Usage)</h2>
               <p className="text-[11px] text-zinc-400">
-                선택 기간({rangeDays}일) 내 Failsafe, Stage, Storage Bytes 누적 추이
+                최근 {CHART_DAYS}일 내 Failsafe, Stage, Storage Bytes 누적 추이
               </p>
             </div>
           </div>
           <span className="text-xs font-medium text-zinc-500 bg-zinc-50 px-2.5 py-1 rounded-md border border-zinc-200">
-            최근 {rangeDays}일 기준
+            최근 {CHART_DAYS}일 기준
           </span>
         </div>
-
         <StorageChart
           currentData={storageData?.currentData || []}
           selectedRange="days"
-          days={rangeDays}
+          days={CHART_DAYS}
           hideRangeControls={true}
           isLoading={loading}
         />
       </section>
 
-      {/* ========================================================================= */}
-      {/* 4. 네 번째 블럭: 컴퓨트 요약 (COM_SF, COM_AI, AI_TOKEN, 총합 + 그래프) */}
-      {/* ========================================================================= */}
+      {/* ===================================================================== */}
+      {/* 4. 컴퓨트 요약 */}
+      {/* ===================================================================== */}
       <section className="bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2">
@@ -459,20 +574,19 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-sm font-bold text-zinc-800">컴퓨트 요약 (Compute Usage)</h2>
               <p className="text-[11px] text-zinc-400">
-                선택 기간({rangeDays}일) 내 서비스별(COM_SF, COM_AI, AI_TOKEN) 일일 크레딧 추이
+                최근 {CHART_DAYS}일 내 서비스별(COM_SF, COM_AI, AI_TOKEN) 일일 크레딧 추이
               </p>
             </div>
           </div>
           <span className="text-xs font-medium text-zinc-500 bg-zinc-50 px-2.5 py-1 rounded-md border border-zinc-200">
-            최근 {rangeDays}일 기준
+            최근 {CHART_DAYS}일 기준
           </span>
         </div>
-
         <ComputeChart
           data={computeData?.dailyData || []}
           summary={computeData?.summary}
           selectedRange="days"
-          days={rangeDays}
+          days={CHART_DAYS}
           hideRangeControls={true}
           isLoading={loading}
         />
