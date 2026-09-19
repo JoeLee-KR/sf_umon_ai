@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Sparkles,
-  AlertTriangle,
   AlertCircle,
   KeyRound,
   RefreshCw,
   Copy,
   Check,
-  FileText,
   BrainCircuit,
-  TrendingUp,
-  Flame,
   ShieldCheck,
 } from 'lucide-react';
 import { AiStatusType } from '@/types/pattern';
@@ -29,125 +27,83 @@ interface AiAnalysisResultProps {
   aiProvider?: 'gemini' | 'claude';
 }
 
-/**
- * AI 마크다운 텍스트를 파싱하여 깔끔한 리액트 컴포넌트로 렌더링
- */
-function MarkdownRenderer({ content }: { content: string }) {
-  const lines = content.split('\n');
-
-  return (
-    <div className="space-y-3 text-zinc-800 text-sm leading-relaxed">
-      {lines.map((line, idx) => {
-        const trimmed = line.trim();
-
-        // 빈 줄
-        if (!trimmed) {
-          return <div key={idx} className="h-1" />;
-        }
-
-        // H3 (###)
-        if (trimmed.startsWith('### ')) {
-          const title = trimmed.replace(/^###\s+/, '');
-          return (
-            <div
-              key={idx}
-              className="pt-3 pb-1 border-b border-zinc-200 text-base font-bold text-zinc-900 flex items-center gap-2"
-            >
-              <span className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-              <span>{title}</span>
-            </div>
-          );
-        }
-
-        // H2 (##)
-        if (trimmed.startsWith('## ')) {
-          const title = trimmed.replace(/^##\s+/, '');
-          return (
-            <h2
-              key={idx}
-              className="pt-4 pb-1 text-lg font-extrabold text-zinc-900 border-b border-zinc-300"
-            >
-              {title}
-            </h2>
-          );
-        }
-
-        // H1 (#)
-        if (trimmed.startsWith('# ')) {
-          const title = trimmed.replace(/^#\s+/, '');
-          return (
-            <h1 key={idx} className="pt-4 text-xl font-black text-zinc-900">
-              {title}
-            </h1>
-          );
-        }
-
-        // 불릿 리스트 (- 또는 *)
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          const text = trimmed.replace(/^[-*]\s+/, '');
-          return (
-            <div key={idx} className="flex items-start gap-2.5 pl-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
-              <div className="flex-1">{renderInlineFormatting(text)}</div>
-            </div>
-          );
-        }
-
-        // 번호 매기기 리스트 (1. 2.)
-        const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
-        if (numMatch) {
-          const num = numMatch[1];
-          const text = numMatch[2];
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-2">
-              <span className="font-semibold text-indigo-600 shrink-0 text-xs mt-0.5 bg-indigo-50 px-1.5 py-0.5 rounded-sm border border-indigo-100">
-                {num}
-              </span>
-              <div className="flex-1">{renderInlineFormatting(text)}</div>
-            </div>
-          );
-        }
-
-        // 기본 문단
-        return (
-          <p key={idx} className="text-zinc-700">
-            {renderInlineFormatting(trimmed)}
-          </p>
-        );
-      })}
+/** react-markdown 커스텀 컴포넌트 — Tailwind 스타일 적용 */
+const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
+  h1: ({ children }) => (
+    <h1 className="text-xl font-black text-zinc-900 pt-4 pb-1">{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-lg font-extrabold text-zinc-900 pt-4 pb-1 border-b border-zinc-300">{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <div className="flex items-center gap-2 pt-3 pb-1 border-b border-zinc-200">
+      <span className="w-1.5 h-4 bg-indigo-600 rounded-full shrink-0" />
+      <h3 className="text-base font-bold text-zinc-900">{children}</h3>
     </div>
-  );
-}
-
-/**
- * 인라인 굵은 글씨 (**text**) 및 코드 (`code`) 렌더링
- */
-function renderInlineFormatting(text: string): React.ReactNode {
-  // 간단한 **bold** 및 `code` 파싱
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
-
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      const inner = part.slice(2, -2);
+  ),
+  p: ({ children }) => (
+    <p className="text-zinc-700 text-sm leading-relaxed">{children}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="space-y-1 pl-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="space-y-1 pl-1">{children}</ol>
+  ),
+  li: ({ children, ...props }) => {
+    const isOrdered = 'index' in props;
+    return (
+      <li className="flex items-start gap-2.5">
+        {isOrdered ? (
+          <span className="font-semibold text-indigo-600 shrink-0 text-xs mt-0.5 bg-indigo-50 px-1.5 py-0.5 rounded-sm border border-indigo-100 min-w-[20px] text-center">
+            {(props as { index: number }).index + 1}
+          </span>
+        ) : (
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+        )}
+        <span className="flex-1 text-sm text-zinc-700 leading-relaxed">{children}</span>
+      </li>
+    );
+  },
+  strong: ({ children }) => (
+    <strong className="font-bold text-zinc-900 bg-zinc-100/80 px-0.5 rounded-xs">{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-zinc-600">{children}</em>
+  ),
+  pre: ({ children }) => <div className="my-2">{children}</div>,
+  code: ({ children, className }) => {
+    const content = String(children);
+    const isBlock = className?.startsWith('language-') || content.includes('\n');
+    if (isBlock) {
       return (
-        <strong key={i} className="font-bold text-zinc-900 bg-zinc-100/80 px-1 py-0.5 rounded-xs">
-          {inner}
-        </strong>
-      );
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      const inner = part.slice(1, -1);
-      return (
-        <code
-          key={i}
-          className="font-mono text-xs bg-zinc-100 text-indigo-700 border border-zinc-200 px-1.5 py-0.5 rounded-md"
-        >
-          {inner}
+        <code className="block font-mono text-xs bg-zinc-900 text-amber-300 p-3 rounded-lg overflow-x-auto whitespace-pre">
+          {content.trimEnd()}
         </code>
       );
     }
-    return part;
-  });
+    return (
+      <code className="font-mono text-xs bg-zinc-100 text-indigo-700 border border-zinc-200 px-1.5 py-0.5 rounded-md">
+        {children}
+      </code>
+    );
+  },
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-indigo-300 pl-3 italic text-zinc-600 text-sm my-2">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="border-zinc-200 my-3" />,
+};
+
+function MarkdownRenderer({ content }: { content: string }) {
+  return (
+    <div className="space-y-3 text-zinc-800 text-sm leading-relaxed">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 export default function AiAnalysisResult({

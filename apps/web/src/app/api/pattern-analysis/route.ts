@@ -289,6 +289,9 @@ async function requestGeminiAnalysis(
 - 일평균 스토리지 용량: ${formatBytes(summary.avgStorageBytes, 2)}
 - 최대 스토리지 용량: ${formatBytes(summary.maxStorageBytes, 2)} (발생일: ${summary.maxStorageDate})
 
+[CSV 세부 데이터]
+${csvData}
+
 [분석 및 리포트 작성 요구사항]
 다음 구조로 명확하고 전문적이며 읽기 쉽게 마크다운(Markdown) 포맷으로 작성해 주십시오:
 

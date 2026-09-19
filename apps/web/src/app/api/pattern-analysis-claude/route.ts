@@ -178,7 +178,16 @@ ${csvData}
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 4096,
+      max_tokens: 1500,
+
+      // 2. 시스템 프롬프트로 서술형 장문을 원천 차단하고 불릿포인트 압축 지시
+      system: `당신은 데이터 인프라 분석가임. 
+불필요한 인사말, 배경 설명, 서론/결론은 생략하고 아래 3개 항목만 불릿포인트로 간결하게 작성 할것. 
+1. 핵심 요약 (2줄 이내)
+2. 일자별 주요 패턴 및 특이점 (3~5개 불릿)
+3. 이상 징후 및 권고사항 (3줄 이내)
+총 길이는 한국어 800자 이내로 엄격히 제한.
+답변과 결과물은 명확하고 전문적이며 읽기 쉽게 마크다운(Markdown) 포맷으로 작성`,
       messages: [{ role: "user", content: promptText }],
     });
 
