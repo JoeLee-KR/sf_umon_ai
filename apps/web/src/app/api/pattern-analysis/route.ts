@@ -336,6 +336,11 @@ ${csvData}
     logger.log(`데이터 전송 모드: 인라인 직접 전송 (${csvBytes} bytes, 통신 왕복 최적화)`);
   }
 
+  const systemInstruction = `당신은 Snowflake FinOps 분석가입니다.
+인사말·서론·맺음말 없이 아래 4개 섹션만 마크다운으로 작성하세요.
+각 섹션은 불릿 3~5개 이내로 작성하세요.
+전체 응답은 반드시 한국어 2000자 이내로 완결하세요.`;
+
   // agy에 요청할 내용 전체 로깅
   logger.log("agy에 요청할 내용 (전체요청내용)", {
     prompt: promptInstructions,
@@ -343,7 +348,7 @@ ${csvData}
     fileUri: fileInfo?.fileUri,
     csvBytes,
     thinkingBudgetBlocked: true,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 3200,
   });
 
   // 지원 후보 모델 목록 (Flash 계열 우선, 503 과부하 대비 Pro 백업, 최후 Antigravity)
@@ -381,7 +386,7 @@ ${csvData}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const generationConfig: any = {
             temperature: 0.2,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 3200,
           };
 
           // 모델이 Thinking 기능을 지원하는 경우에만 thinkingBudget: 0 주입 (미지원 모델 400 방지)
@@ -391,15 +396,16 @@ ${csvData}
             };
           }
 
+          const requestBody: Record<string, unknown> = {
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ parts }],
+            generationConfig,
+          };
+
           let res = await fetch(endpoint, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [{ parts }],
-              generationConfig,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
           });
 
           // 만약 "Thinking is not enabled" 에러(400)가 반환되면, thinkingConfig를 제거하고 즉시 1회 재요청
@@ -412,17 +418,11 @@ ${csvData}
                 model,
                 error: errMsg,
               });
-
               delete generationConfig.thinkingConfig;
               res = await fetch(endpoint, {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  contents: [{ parts }],
-                  generationConfig,
-                }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...requestBody, generationConfig }),
               });
             }
           }
