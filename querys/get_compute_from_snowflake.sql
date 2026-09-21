@@ -15,4 +15,7 @@ FROM snowflake.account_usage.metering_daily_history
 WHERE usage_date >= date('2026-09-01') 
     -- AND usage_date <= date('2026-04-30')
 ORDER BY USAGE_DATE DESC, SERVICE_TYPE ASC
+
+--
+
 ;
