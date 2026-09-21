@@ -10,6 +10,10 @@ public interface Command {
 
     String name();
 
+    default String path() {
+        return group() + "/" + name();
+    }
+
     String description();
 
     void run(String[] args, EnvConfig env) throws Exception;

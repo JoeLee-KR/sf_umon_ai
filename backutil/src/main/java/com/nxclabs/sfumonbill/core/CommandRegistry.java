@@ -30,6 +30,16 @@ public final class CommandRegistry {
         return COMMANDS;
     }
 
+    public static Command find(String path) {
+        if (path == null) {
+            return null;
+        }
+        return COMMANDS.stream()
+                .filter(c -> c.path().equals(path))
+                .findFirst()
+                .orElse(null);
+    }
+
     public static Command find(String group, String name) {
         return COMMANDS.stream()
                 .filter(c -> c.group().equals(group) && c.name().equals(name))

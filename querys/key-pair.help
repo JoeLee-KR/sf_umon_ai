@@ -1,0 +1,22 @@
+# 개인키 생성
+openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out snow_xjoelee_rsakey.p8 -nocrypt
+
+# 공개키 추출
+openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+openssl rsa -in snow_xjoelee_rsakey.p8 -pubout -out snow_xjoelee_rsakey.pub
+
+# snowflake에 접속하여, 
+-- 공개키 파일 내용에서
+-- -----BEGIN PUBLIC KEY----- 와 -----END PUBLIC KEY----- 제외하고
+-- 중간 내용만 붙여넣기
+ALTER USER "xjoelee@sk.com"
+SET RSA_PUBLIC_KEY = 'MIIBIjANBgkq...여기에붙여넣기...AQAB';
+
+# DBeaver Driver Properties
+# Main Tab 에 수작업으로 주입
+authenticator = snowflake_jwt
+# 아래는 Driver properties에 custom으로 추가하여 주입
+private_key_file = /Users/joe/keys/rsa_key.p8
+
+# EOF

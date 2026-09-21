@@ -38,10 +38,21 @@ public final class EnvConfig {
 
         Path specPath = Path.of(resolvedSpec);
         Path parent = specPath.getParent();
-        Path dir = (parent != null) ? parent : jarDir();
-        Path file = dir.resolve(specPath.getFileName());
+        Path file;
+        if (parent != null) {
+            file = parent.resolve(specPath.getFileName());
+        } else {
+            Path candidate = jarDir().resolve(specPath.getFileName());
+            if (Files.exists(candidate)) {
+                file = candidate;
+            } else if (Files.exists(specPath)) {
+                file = specPath;
+            } else {
+                file = candidate;
+            }
+        }
 
-        EnvConfig config = new EnvConfig(resolvedSpec, file);
+        EnvConfig config = new EnvConfig(resolvedSpec, file.toAbsolutePath().normalize());
 
         if (!Files.exists(file)) {
             throw new IOException(
@@ -84,6 +95,10 @@ public final class EnvConfig {
         } catch (Exception e) {
             return Path.of(".");
         }
+    }
+
+    public Path file() {
+        return file;
     }
 
     public String name() {
