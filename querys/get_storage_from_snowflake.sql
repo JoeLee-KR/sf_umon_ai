@@ -1,7 +1,17 @@
 --
 -- snowflake: storage, raw data, 
 -- Full RAW data
-DESC TABLE snowflake.account_usage.metering_daily_history;
+DESC TABLE snowflake.account_usage.storage_usage;
+
+SELECT  usage_date
+        , storage_bytes / power(1024,4)
+        , stage_bytes / power(1024,4)
+        , failsafe_bytes / power(1024,4)
+        , (storage_bytes + stage_bytes + failsafe_bytes) / power(1024,4)
+FROM snowflake.account_usage.storage_usage
+WHERE usage_date >= date('2026-03-01')
+ORDER BY    usage_date DESC
+-- LIMIT 10
 
 --
 -- mysql storage raw data schema
