@@ -14,7 +14,7 @@ export default function UserDetailPage() {
       <div className="bg-white border border-zinc-200 rounded-lg p-4 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
           <Link
-            href="/"
+            href="/dashboard"
             className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition"
             title="대시보드로 돌아가기"
           >

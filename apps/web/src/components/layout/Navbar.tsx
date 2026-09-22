@@ -10,11 +10,14 @@ export default function Navbar() {
 
   return (
     <header className="h-14 border-b border-zinc-200 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shrink-0">
-      {/* 로고 영역 (링크 없이 기존 형태 유지) */}
-      <div className="flex items-center gap-2.5 font-bold text-zinc-900 tracking-tight text-sm select-none">
+      {/* 로고 영역 (대시보드 이동 링크) */}
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-2.5 font-bold text-zinc-900 tracking-tight text-sm select-none hover:opacity-80 transition cursor-pointer"
+      >
         <Activity className="h-5 w-5 text-indigo-600 shrink-0" />
         <span>(Study Project) SF UMON, feat. Vibe Code & AI</span>
-      </div>
+      </Link>
 
       {/* 우측 영역 */}
       <div className="flex items-center gap-3">

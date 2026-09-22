@@ -28,7 +28,7 @@ export default function LoginForm() {
       if (!result.success) {
         setError(result.message || `[${authMode} 모드] 로그인에 실패했습니다.`);
       } else {
-        router.push('/employees');
+        router.push('/dashboard');
       }
     } catch (err) {
       setError((err as Error).message || `[${authMode} 모드] 로그인 중 오류가 발생했습니다.`);

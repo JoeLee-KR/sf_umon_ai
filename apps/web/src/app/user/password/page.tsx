@@ -90,7 +90,7 @@ export default function PasswordChangePage() {
             <span>사용자 정보로 돌아가기</span>
           </Link>
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition"
           >
             <span>대시보드로 이동</span>
