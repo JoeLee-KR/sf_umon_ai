@@ -52,7 +52,7 @@ export default function PatternAnalysisClaudePage() {
     setErrorMessage(null);
 
     try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
       const url = `${basePath}/api/pattern-analysis-claude?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`;
 
       const res = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });

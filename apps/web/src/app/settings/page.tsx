@@ -10,6 +10,7 @@ import {
   Sliders,
   UserCog,
 } from 'lucide-react';
+import DatabaseSettingsSection from '@/components/settings/DatabaseSettingsSection';
 
 const settingSections = [
   {
@@ -85,6 +86,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* 데이터베이스 연결 설정 상세 영역 */}
+      <DatabaseSettingsSection />
 
       {/* 설정 카드 목록 */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">

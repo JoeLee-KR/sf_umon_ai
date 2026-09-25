@@ -65,7 +65,7 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3">
           <div className="flex items-center justify-between text-zinc-500 text-xs">
             <span>전체 평균 임금</span>
-            <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+            <DollarSign className="h-3.5 w-3.5 text-blue-500" />
           </div>
           <p className="text-lg font-bold text-zinc-900 mt-1">{formatCurrency(overallAvgSalary)}</p>
           <span className="text-[11px] text-zinc-400">{formatCurrencyFull(overallAvgSalary)}</span>
@@ -74,13 +74,13 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
         <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3">
           <div className="flex items-center justify-between text-zinc-500 text-xs">
             <span>최고 임금 부서</span>
-            <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+            <TrendingUp className="h-3.5 w-3.5 text-orange-500" />
           </div>
           {(() => {
             const topDept = [...stats].sort((a, b) => b.maxSalary - a.maxSalary)[0];
             return (
               <>
-                <p className="text-lg font-bold text-indigo-600 mt-1">{topDept?.department || '-'}</p>
+                <p className="text-lg font-bold text-orange-600 mt-1">{topDept?.department || '-'}</p>
                 <span className="text-[11px] text-zinc-400">최고: {formatCurrency(topDept?.maxSalary || 0)}</span>
               </>
             );
@@ -113,11 +113,11 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
             onClick={() => toggleMetric('max')}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition ${
               visibleMetrics.max
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                ? 'bg-orange-50 border-orange-300 text-orange-700'
                 : 'bg-zinc-50 border-zinc-200 text-zinc-400 opacity-60'
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-xs bg-indigo-600"></span>
+            <span className="w-2.5 h-2.5 rounded-xs bg-orange-500"></span>
             최고 임금 (Max)
           </button>
           <button
@@ -125,11 +125,11 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
             onClick={() => toggleMetric('avg')}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition ${
               visibleMetrics.avg
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : 'bg-zinc-50 border-zinc-200 text-zinc-400 opacity-60'
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
+            <span className="w-2.5 h-2.5 rounded-xs bg-blue-500"></span>
             평균 임금 (Avg)
           </button>
           <button
@@ -137,11 +137,11 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
             onClick={() => toggleMetric('min')}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition ${
               visibleMetrics.min
-                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
                 : 'bg-zinc-50 border-zinc-200 text-zinc-400 opacity-60'
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-xs bg-amber-500"></span>
+            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
             최저 임금 (Min)
           </button>
         </div>
@@ -206,10 +206,10 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
 
                   {/* 3단 임금 막대 그룹 */}
                   <div className="w-full flex items-end justify-center gap-1.5 h-44 px-1">
-                    {/* 1. 최고 임금 */}
+                    {/* 1. 최고 임금 (주홍색) */}
                     {visibleMetrics.max && (
                       <div
-                        className="w-1/3 max-w-[18px] bg-indigo-500 hover:bg-indigo-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
+                        className="w-1/3 max-w-[18px] bg-orange-500 hover:bg-orange-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
                         style={{ height: `${Math.max(maxRatio, 4)}%` }}
                       >
                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition text-[9px] bg-zinc-900 text-white px-1 py-0.5 rounded pointer-events-none whitespace-nowrap z-20">
@@ -218,10 +218,10 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
                       </div>
                     )}
 
-                    {/* 2. 평균 임금 */}
+                    {/* 2. 평균 임금 (파란색) */}
                     {visibleMetrics.avg && (
                       <div
-                        className="w-1/3 max-w-[18px] bg-emerald-500 hover:bg-emerald-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
+                        className="w-1/3 max-w-[18px] bg-blue-500 hover:bg-blue-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
                         style={{ height: `${Math.max(avgRatio, 4)}%` }}
                       >
                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition text-[9px] bg-zinc-900 text-white px-1 py-0.5 rounded pointer-events-none whitespace-nowrap z-20">
@@ -230,10 +230,10 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
                       </div>
                     )}
 
-                    {/* 3. 최저 임금 */}
+                    {/* 3. 최저 임금 (녹색) */}
                     {visibleMetrics.min && (
                       <div
-                        className="w-1/3 max-w-[18px] bg-amber-500 hover:bg-amber-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
+                        className="w-1/3 max-w-[18px] bg-emerald-500 hover:bg-emerald-600 rounded-t-sm transition-all duration-300 relative group/bar shadow-xs"
                         style={{ height: `${Math.max(minRatio, 4)}%` }}
                       >
                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition text-[9px] bg-zinc-900 text-white px-1 py-0.5 rounded pointer-events-none whitespace-nowrap z-20">
@@ -261,27 +261,27 @@ export default function DepartmentChart({ stats }: DepartmentChartProps) {
 
         {/* 4. 활성 부서 호버 상세 패널 */}
         {selectedStat && (
-          <div className="mt-4 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-lg flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="mt-4 p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-indigo-900 text-sm">{selectedStat.department} 부서</span>
-              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded text-[11px] font-medium">
+              <span className="font-bold text-zinc-900 text-sm">{selectedStat.department} 부서</span>
+              <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-[11px] font-medium">
                 인원 {selectedStat.count}명
               </span>
             </div>
             <div className="flex items-center gap-4 text-zinc-700 font-mono">
               <div>
                 <span className="text-zinc-500 text-[11px] block">최고 임금</span>
-                <span className="font-bold text-indigo-700">{formatCurrencyFull(selectedStat.maxSalary)}</span>
+                <span className="font-bold text-orange-600">{formatCurrencyFull(selectedStat.maxSalary)}</span>
               </div>
-              <div className="border-l border-indigo-200 pl-4">
+              <div className="border-l border-zinc-200 pl-4">
                 <span className="text-zinc-500 text-[11px] block">평균 임금</span>
-                <span className="font-bold text-emerald-700">{formatCurrencyFull(selectedStat.avgSalary)}</span>
+                <span className="font-bold text-blue-600">{formatCurrencyFull(selectedStat.avgSalary)}</span>
               </div>
-              <div className="border-l border-indigo-200 pl-4">
+              <div className="border-l border-zinc-200 pl-4">
                 <span className="text-zinc-500 text-[11px] block">최저 임금</span>
-                <span className="font-bold text-amber-700">{formatCurrencyFull(selectedStat.minSalary)}</span>
+                <span className="font-bold text-emerald-600">{formatCurrencyFull(selectedStat.minSalary)}</span>
               </div>
-              <div className="border-l border-indigo-200 pl-4">
+              <div className="border-l border-zinc-200 pl-4">
                 <span className="text-zinc-500 text-[11px] block">격차 (Max - Min)</span>
                 <span className="font-bold text-zinc-800">
                   {formatCurrencyFull(selectedStat.maxSalary - selectedStat.minSalary)}

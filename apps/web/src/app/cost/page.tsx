@@ -23,7 +23,7 @@ export default function MonthlyCostPage() {
     setLoadingHistory(true);
     setHistoryError(null);
     try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
       const url = limit > 0
         ? `${basePath}/api/cost/history?months=${limit}`
         : `${basePath}/api/cost/history`;

@@ -18,7 +18,7 @@ export default function Sidebar() {
     { label: '사용량패턴분석(gemini)', href: '/pattern-analysis', icon: Sparkles },
     { label: '사용량패턴분석(claude)', href: '/pattern-analysis-claude', icon: BrainCircuit },
     { label: '(개발후보)설정 관리', href: '/settings', icon: Sliders },
-    { label: '(테스트)직원연봉', href: '/employees', icon: Users },
+    { label: '(테스트)직원급여분석', href: '/employees', icon: Users },
   ];
 
   return (

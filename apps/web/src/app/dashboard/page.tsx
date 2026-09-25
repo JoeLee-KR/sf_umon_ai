@@ -81,7 +81,7 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
 
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
 
     try {
       // 전월 startDate / endDate 계산

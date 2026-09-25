@@ -39,7 +39,7 @@ export default function StoragePage() {
       setError(null);
 
       try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
         let url = `${basePath}/api/storage`;
 
         if (range === 'days') {
@@ -79,7 +79,7 @@ export default function StoragePage() {
       setLoading(true);
       setError(null);
       try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
         let url = `${basePath}/api/storage`;
 
         if (selectedRange === 'days') {

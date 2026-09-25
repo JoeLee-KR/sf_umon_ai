@@ -62,7 +62,7 @@ export default function MonthlyCostCalculator({
     setSuccessMessage(null);
 
     try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
       const res = await fetch(`${basePath}/api/cost/calculate?month=${month}`);
 
       if (!res.ok) {
@@ -178,7 +178,7 @@ export default function MonthlyCostCalculator({
     setSuccessMessage(null);
 
     try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
       const payload = {
         billing_month: data.usage.month,
         start_date: data.usage.startDate,
@@ -281,7 +281,7 @@ export default function MonthlyCostCalculator({
             onClick={handleResetToPrevMonth}
             className="px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition"
           >
-            전달로 재설정
+            최근 월
           </button>
         </div>
       </div>

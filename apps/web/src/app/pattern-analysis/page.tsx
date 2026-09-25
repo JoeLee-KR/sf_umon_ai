@@ -65,7 +65,7 @@ export default function PatternAnalysisPage() {
       setErrorMessage(null);
 
       try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/sfumonai';
         const url = `${basePath}/api/pattern-analysis?startDate=${encodeURIComponent(
           start
         )}&endDate=${encodeURIComponent(end)}`;
