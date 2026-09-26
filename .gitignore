@@ -1,6 +1,7 @@
 # JOE
 .DS_Store
 **/.DS_Store
+.claude/setting*
 
 # Logs
 logs
