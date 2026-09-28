@@ -55,6 +55,7 @@ export default function PatternAnalysisPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<'mysql' | 'mock'>('mysql');
+  const [freeInput, setFreeInput] = useState<string>('');
   const [dbNotice, setDbNotice] = useState<string | undefined>();
 
 
@@ -201,8 +202,25 @@ export default function PatternAnalysisPage() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>{isLoading ? '분석 요청 중...' : '분석 요청'}</span>
+              <span>{isLoading ? '분석 요청 중...' : '기본분석요청'}</span>
             </button>
+              <div className="flex flex-wrap items-center gap-2.5 mt-2">
+                <input
+                  type="text"
+                  placeholder="자유 분석 입력"
+                  value={freeInput}
+                  onChange={(e) => setFreeInput(e.target.value)}
+                  className="bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700"
+                />
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
+                >
+                  <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>{isLoading ? '분석 요청 중...' : '자유분석요청'}</span>
+                </button>
+              </div>
           </div>
         </div>
       </section>
