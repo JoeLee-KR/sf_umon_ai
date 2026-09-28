@@ -47,4 +47,5 @@ export interface PatternAnalysisResponse {
   db_name?: string;
   db_user?: string;
   logFile?: string;
+  aiModel?: string; // 실제 사용된 AI 모델명
 }

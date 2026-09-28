@@ -11,28 +11,29 @@ import {
   UserCog,
 } from 'lucide-react';
 import DatabaseSettingsSection from '@/components/settings/DatabaseSettingsSection';
+import AiSettingsSection from '@/components/settings/AiSettingsSection';
 
 const settingSections = [
   {
-    title: '기본 환경 설정',
+    title: '기본 환경 설정 (TBD)',
     description: '서비스명, 기본 조회 기간, 화면 표시 옵션을 관리합니다.',
     icon: Sliders,
     items: ['기본 조회 기간: 최근 30일', '대시보드 자동 새로고침: 사용 안 함', '숫자 단위 표시: 자동 변환'],
   },
   {
-    title: '사용자 및 권한 관리',
+    title: '사용자 및 권한 관리 (TBD)',
     description: '관리자, 일반 사용자, 조회 전용 권한을 설정합니다.',
     icon: UserCog,
     items: ['관리자 계정 관리', '메뉴별 접근 권한', '사용자별 데이터 조회 범위'],
   },
   {
-    title: '데이터베이스 연결 설정',
+    title: '데이터베이스 연결 설정 (TBD)',
     description: '모니터링 데이터 조회를 위한 연결 정보를 관리합니다.',
     icon: Database,
     items: ['MySQL 연결 정보', 'Snowflake 원천 테이블 매핑', '연결 상태 점검'],
   },
   {
-    title: '보안 정책',
+    title: '보안 정책 (TBD)',
     description: '비밀번호, 세션, 접근 제한 정책을 설정합니다.',
     icon: Shield,
     items: ['비밀번호 만료 주기', '세션 유지 시간', 'IP 접근 제한'],
@@ -90,6 +91,9 @@ export default function SettingsPage() {
       {/* 데이터베이스 연결 설정 상세 영역 */}
       <DatabaseSettingsSection />
 
+      {/* AI API 설정 정보 */}
+      <AiSettingsSection />
+
       {/* 설정 카드 목록 */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {settingSections.map((section) => {
@@ -130,7 +134,7 @@ export default function SettingsPage() {
       <section className="bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
           <KeyRound className="h-4 w-4 text-zinc-700" />
-          <h2 className="text-sm font-bold text-zinc-800">운영 설정 예시</h2>
+          <h2 className="text-sm font-bold text-zinc-800">운영 설정 예시 (TBD)</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -269,7 +269,7 @@ async function requestGeminiAnalysis(
   csvData: string,
   summary: PatternAnalysisSummary,
   logger: AgyLogger
-): Promise<{ success: boolean; status: 'SUCCESS' | 'CONNECTION_ERROR'; analysis?: string; detail?: string }> {
+): Promise<{ success: boolean; status: 'SUCCESS' | 'CONNECTION_ERROR'; analysis?: string; detail?: string; model?: string }> {
   const startTime = Date.now();
   const csvBytes = Buffer.byteLength(csvData, "utf-8");
 
@@ -447,7 +447,7 @@ ${csvData}
                 textLength: text.length,
                 usageMetadata: json?.usageMetadata,
               });
-              return { success: true, status: "SUCCESS", analysis: text };
+              return { success: true, status: "SUCCESS", analysis: text, model };
             }
           }
 
@@ -685,6 +685,7 @@ export async function GET(request: NextRequest) {
       summary,
       aiStatus: "SUCCESS",
       aiAnalysis: aiResult.analysis,
+      aiModel: aiResult.model,
       source,
       message: dbMessage,
       logFile: logger.getFileName(),

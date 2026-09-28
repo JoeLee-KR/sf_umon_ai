@@ -126,7 +126,7 @@ async function requestClaudeAnalysis(
   csvData: string,
   summary: PatternAnalysisSummary,
   logger: ClaudeLogger
-): Promise<{ success: boolean; status: 'SUCCESS' | 'CONNECTION_ERROR'; analysis?: string; detail?: string }> {
+): Promise<{ success: boolean; status: 'SUCCESS' | 'CONNECTION_ERROR'; analysis?: string; detail?: string; model?: string }> {
   const startTime = Date.now();
   const csvBytes = Buffer.byteLength(csvData, "utf-8");
 
@@ -177,7 +177,7 @@ ${csvData}
     const client = new Anthropic({ apiKey });
 
     const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-haiku-4-5",
       max_tokens: 3200,
       system: `당신은 Snowflake FinOps 분석가입니다.
 인사말·서론·맺음말 없이 아래 4개 섹션만 마크다운으로 작성하세요.
@@ -206,7 +206,7 @@ ${csvData}
       textLength: analysisText.length,
     });
 
-    return { success: true, status: "SUCCESS", analysis: analysisText };
+    return { success: true, status: "SUCCESS", analysis: analysisText, model: response.model };
   } catch (err) {
     const error = err as Error;
     logger.log("claude의 답변 (오류 내용, 메시지 등)", {
@@ -329,6 +329,7 @@ export async function GET(request: NextRequest) {
     const response: PatternAnalysisResponse = {
       success: true, data: dailyData, summary,
       aiStatus: "SUCCESS", aiAnalysis: aiResult.analysis,
+      aiModel: aiResult.model,
       source, message: dbMessage, logFile: logger.getFileName(),
     };
     return NextResponse.json(response);

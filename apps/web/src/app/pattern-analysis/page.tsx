@@ -51,6 +51,7 @@ export default function PatternAnalysisPage() {
   const [aiDetail, setAiDetail] = useState<string | undefined>();
   const [aiAnalysis, setAiAnalysis] = useState<string | undefined>();
   const [logFileName, setLogFileName] = useState<string | undefined>();
+  const [aiModel, setAiModel] = useState<string | undefined>('gemini-3.8-flash');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -96,6 +97,7 @@ export default function PatternAnalysisPage() {
         setDataSource(json.source);
         setDbNotice(json.message);
         setLogFileName(json.logFile);
+        setAiModel(json.aiModel);
       } catch (err) {
         const msg = (err as Error).message;
         setErrorMessage(msg);
@@ -128,6 +130,7 @@ export default function PatternAnalysisPage() {
             </div>
             <h1 className="text-xl font-bold text-zinc-900">
               사용량 패턴 분석 (Gemini)
+              {aiModel && <span className="ml-2 text-sm font-normal text-zinc-400">{aiModel}</span>}
             </h1>
           </div>
           <p className="text-xs text-zinc-500 mt-1">
@@ -172,56 +175,57 @@ export default function PatternAnalysisPage() {
         </div>
       )}
 
-      {/* 2. 컨트롤 바: 맨 위에 조회기간 지정 및 분석 요청 버튼 */}
-      <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* 직접 날짜 입력 및 분석 요청 버튼 */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700">
-              <Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent border-none text-zinc-800 text-xs font-mono focus:outline-hidden"
-              />
-              <span className="text-zinc-400">~</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent border-none text-zinc-800 text-xs font-mono focus:outline-hidden"
-              />
-            </div>
-
-            {/* 핵심 버튼: 분석 요청 */}
-            <button
-              type="button"
-              onClick={handleRequestClick}
-              disabled={isLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
-            >
-              <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>{isLoading ? '분석 요청 중...' : '기본분석요청'}</span>
-            </button>
-              <div className="flex flex-wrap items-center gap-2.5 mt-2">
-                <input
-                  type="text"
-                  placeholder="자유 분석 입력"
-                  value={freeInput}
-                  onChange={(e) => setFreeInput(e.target.value)}
-                  className="bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700"
-                />
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
-                >
-                  <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span>{isLoading ? '분석 요청 중...' : '자유분석요청'}</span>
-                </button>
-              </div>
+      {/* 2. 컨트롤 바: 조회기간 지정 및 기본 분석 요청 */}
+      <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700">
+            <Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent border-none text-zinc-800 text-xs font-mono focus:outline-hidden"
+            />
+            <span className="text-zinc-400">~</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent border-none text-zinc-800 text-xs font-mono focus:outline-hidden"
+            />
           </div>
+
+          <button
+            type="button"
+            onClick={handleRequestClick}
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
+          >
+            <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{isLoading ? '분석 요청 중...' : '기본분석요청'}</span>
+          </button>
+        </div>
+      </section>
+
+      {/* 2-1. 자유 분석 요청 블럭 */}
+      <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-2xs">
+        <h2 className="text-xs font-semibold text-zinc-500 mb-3">자유 분석 요청</h2>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <input
+            type="text"
+            placeholder="분석하고 싶은 내용을 자유롭게 입력하세요"
+            value={freeInput}
+            onChange={(e) => setFreeInput(e.target.value)}
+            className="flex-1 min-w-[240px] bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-300"
+          />
+          <button
+            type="button"
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
+          >
+            <Sparkles className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>자유분석요청</span>
+          </button>
         </div>
       </section>
 
