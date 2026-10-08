@@ -321,7 +321,7 @@ export async function fetchStorageUsage(options?: {
 const COM_SF_SET = new Set<string>(COM_SF_SERVICES);
 const COM_AI_SET = new Set<string>([
   ...COM_AI_SERVICES,
-  'SNOWFLAKE_CODE_SNOWSIGHT',
+  'SNOWFLAKE_COCO_SNOWSIGHT',
 ]);
 const AI_TOKEN_SET = new Set<string>(AI_TOKEN_SERVICES);
 
